@@ -14,7 +14,10 @@ struct StreakJournalApp: App {
                 .onAppear(perform: applyAppearance)
                 .onChange(of: appearance) { _, _ in applyAppearance() }
                 .frame(minWidth: 980, minHeight: 660)
-                .task { Store.shared.bootstrap() }
+                .task {
+                    Store.shared.bootstrap()
+                    StatusItemController.shared.installIfNeeded()
+                }
         }
         .commands {
             CommandGroup(after: .newItem) {
@@ -87,38 +90,40 @@ struct MenuBarPanel: View {
     }
 }
 
-/// 顶部菜单栏图标（NSStatusItem + NSPopover，比 MenuBarExtra 更可靠）
-final class AppDelegate: NSObject, NSApplicationDelegate {
+/// 顶部菜单栏图标（NSStatusItem + NSPopover）
+/// 注意：不放在 AppDelegate 的 applicationDidFinishLaunching 里，
+/// 而是从主窗口的 .task 调用 installIfNeeded——swiftc 直编环境下
+/// NSApplicationDelegateAdaptor 的生命周期回调不可靠，View 生命周期是确定会执行的。
+final class StatusItemController: NSObject {
+    static let shared = StatusItemController()
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
+    private var installed = false
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        // 启动时按用户设置应用外观（跟随系统时为 nil）
-        switch UserDefaults.standard.string(forKey: "appearance") ?? "system" {
-        case "light": NSApp.appearance = NSAppearance(named: .aqua)
-        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
-        default: NSApp.appearance = nil
-        }
+    func installIfNeeded() {
+        guard !installed else { return }
+        installed = true
 
-        installStatusItem()
-    }
-
-    private func installStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        guard let button = item.button else { return }
+        guard let button = item.button else {
+            print("[StatusItem] 无法创建状态项按钮")
+            return
+        }
 
         if let path = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
            let img = NSImage(contentsOfFile: path) {
             img.size = NSSize(width: 18, height: 18)
             button.image = img
+            print("[StatusItem] 使用打包图标 MenuBarIcon.png")
         } else {
             button.image = NSImage(systemSymbolName: "rosette", accessibilityDescription: "坚持记录")?
                 .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))
+            print("[StatusItem] 未找到 MenuBarIcon.png，使用 SF Symbol")
         }
+        button.image?.isTemplate = false
         button.toolTip = "坚持记录"
 
-        let panel = MenuBarPanel(store: Store.shared)
-        popover.contentViewController = NSHostingController(rootView: panel)
+        popover.contentViewController = NSHostingController(rootView: MenuBarPanel(store: Store.shared))
         popover.behavior = .transient
         popover.contentSize = NSSize(width: 230, height: 210)
 
@@ -126,6 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.action = #selector(togglePopover)
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         statusItem = item
+        print("[StatusItem] 状态项已安装")
     }
 
     @objc private func togglePopover() {
@@ -159,6 +165,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         if let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 100 }) {
             window.makeKeyAndOrderFront(nil)
+        }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        print("[App] applicationDidFinishLaunching")
+        // 启动时按用户设置应用外观（跟随系统时为 nil）
+        switch UserDefaults.standard.string(forKey: "appearance") ?? "system" {
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        default: NSApp.appearance = nil
         }
     }
 }
