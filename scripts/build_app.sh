@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 APP_NAME="StreakJournal"
 APP_DISPLAY_NAME="坚持记录"
 BUNDLE_ID="com.edy.streakjournal"
-VERSION="1.9.1"
+VERSION="1.9.2"
 ROOT="$(pwd)"
 BUILD="$ROOT/build"
 RESOURCE_SHADOW="$ROOT/.build/toolchain/usr/lib/swift"
@@ -102,6 +102,8 @@ cat > "$APP/Contents/Info.plist" << PLIST
     <string>public.app-category.productivity</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
     <key>NSHumanReadableCopyright</key>
     <string>个人坚持记录工具</string>
 </dict>

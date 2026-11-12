@@ -22,14 +22,6 @@ struct StreakJournalApp: App {
                     .keyboardShortcut("b", modifiers: [.command, .shift])
             }
         }
-
-        // Mac 顶部菜单栏图标 + 快捷面板
-        MenuBarExtra {
-            MenuBarPanel(store: store)
-        } label: {
-            Image(nsImage: MenuBarPanel.loadMenuIcon())
-        }
-        .menuBarExtraStyle(.window)
     }
 
     /// 用 NSApp.appearance 控制主题：从固定主题切回"跟随系统"时设为 nil 即可恢复系统外观，
@@ -43,22 +35,9 @@ struct StreakJournalApp: App {
     }
 }
 
-/// 菜单栏下拉面板：坚持天数速览 + 快捷操作
+/// 菜单栏面板：坚持天数速览 + 快捷操作
 struct MenuBarPanel: View {
     @ObservedObject var store: Store
-
-    static func loadMenuIcon() -> NSImage {
-        if let path = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
-           let img = NSImage(contentsOfFile: path) {
-            img.size = NSSize(width: 18, height: 18)
-            return img
-        }
-        // 兜底：SF Symbol 小恐龙风格图形
-        let cfg = NSImage.SymbolConfiguration(pointSize: 15, weight: .medium)
-        let img = NSImage(systemSymbolName: "rosette", accessibilityDescription: "坚持记录")?
-            .withSymbolConfiguration(cfg) ?? NSImage()
-        return img
-    }
 
     var body: some View {
         VStack(spacing: 10) {
@@ -94,7 +73,7 @@ struct MenuBarPanel: View {
 
             Button("退出坚持记录") { NSApp.terminate(nil) }
         }
-        .padding(8)
+        .padding(10)
         .frame(width: 220)
         .buttonStyle(.plain)
     }
@@ -102,19 +81,84 @@ struct MenuBarPanel: View {
     private func activate(page: Page?) {
         if let page { AppNav.shared.page = page }
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.title == "坚持记录" || $0.isVisible }) {
+        if let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 100 }) {
             window.makeKeyAndOrderFront(nil)
         }
     }
 }
 
+/// 顶部菜单栏图标（NSStatusItem + NSPopover，比 MenuBarExtra 更可靠）
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusItem: NSStatusItem?
+    private let popover = NSPopover()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 启动时按用户设置应用外观（跟随系统时为 nil）
         switch UserDefaults.standard.string(forKey: "appearance") ?? "system" {
         case "light": NSApp.appearance = NSAppearance(named: .aqua)
         case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
         default: NSApp.appearance = nil
+        }
+
+        installStatusItem()
+    }
+
+    private func installStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        guard let button = item.button else { return }
+
+        if let path = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
+           let img = NSImage(contentsOfFile: path) {
+            img.size = NSSize(width: 18, height: 18)
+            button.image = img
+        } else {
+            button.image = NSImage(systemSymbolName: "rosette", accessibilityDescription: "坚持记录")?
+                .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))
+        }
+        button.toolTip = "坚持记录"
+
+        let panel = MenuBarPanel(store: Store.shared)
+        popover.contentViewController = NSHostingController(rootView: panel)
+        popover.behavior = .transient
+        popover.contentSize = NSSize(width: 230, height: 210)
+
+        button.target = self
+        button.action = #selector(togglePopover)
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        statusItem = item
+    }
+
+    @objc private func togglePopover() {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            let menu = NSMenu()
+            let openItem = NSMenuItem(title: "打开主窗口", action: #selector(openMain), keyEquivalent: "")
+            openItem.target = self
+            menu.addItem(openItem)
+            let quitItem = NSMenuItem(title: "退出坚持记录", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+            quitItem.target = NSApp
+            menu.addItem(quitItem)
+            if let button = statusItem?.button {
+                statusItem?.menu = menu
+                button.performClick(nil)
+                statusItem?.menu = nil
+            }
+            return
+        }
+        guard let button = statusItem?.button else { return }
+        if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+        }
+    }
+
+    @objc private func openMain() {
+        AppNav.shared.page = .home
+        NSApp.activate(ignoringOtherApps: true)
+        if let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 100 }) {
+            window.makeKeyAndOrderFront(nil)
         }
     }
 }
