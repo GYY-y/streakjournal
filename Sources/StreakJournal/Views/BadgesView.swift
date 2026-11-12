@@ -223,12 +223,12 @@ struct BadgeDetailOverlay: View {
                         .foregroundStyle(Color(red: 0.62, green: 0.58, blue: 1.0))
                         .padding(.top, 4)
 
-                    Text(badge.name)
+                    Text(badge.localizedName)
                         .font(.system(size: 27, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.top, 12)
 
-                    Text(badge.requirement)
+                    Text(badge.localizedRequirement)
                         .font(.system(size: 14))
                         .foregroundStyle(Color.white.opacity(0.55))
                         .padding(.top, 10)
