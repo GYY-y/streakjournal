@@ -46,7 +46,7 @@ final class L10n: ObservableObject {
     }
 
     /// 带参数翻译：pattern 中用 %@ 占位，按顺序替换
-    static func f(_ pattern: String, _ args: String...) -> String {
+    static func f(_ pattern: String, _ args: [String]) -> String {
         var s = t(pattern)
         for a in args {
             if let r = s.range(of: "%@") {

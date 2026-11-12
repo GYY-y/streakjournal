@@ -16,8 +16,8 @@ struct BadgeDef: Identifiable {
     /// 显示条件（随语言切换）
     var localizedRequirement: String {
         switch kind {
-        case .streak: return L10n.f("连续达成 %@ 天", "\(threshold)")
-        case .cumulative: return L10n.f("累计打卡 %@ 次", "\(threshold)")
+        case .streak: return LF("连续达成 %@ 天", "\(threshold)")
+        case .cumulative: return LF("累计打卡 %@ 次", "\(threshold)")
         }
     }
 }

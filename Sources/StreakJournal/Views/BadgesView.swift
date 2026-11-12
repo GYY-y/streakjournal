@@ -54,7 +54,7 @@ struct BadgesView: View {
         newly.forEach { achieved.insert($0.id) }
         achievedRaw = achieved.joined(separator: ",")
         let names = newly.map(\.name).joined(separator: "、")
-        store.lastMessage = L10n.f("🎉 恭喜解锁新勋章：%@", names)
+        store.lastMessage = LF("🎉 恭喜解锁新勋章：%@", names)
         showConfetti = true
     }
 
