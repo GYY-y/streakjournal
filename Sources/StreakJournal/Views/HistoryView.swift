@@ -9,6 +9,14 @@ struct HistoryView: View {
         var id: String { rawValue }
     }
 
+    /// 时间线条目：有记录的日子 + 仅有破戒事件的日子
+    struct TimelineItem: Identifiable {
+        let date: String
+        let record: DailyRecord?
+        let relapseNote: String?
+        var id: String { date }
+    }
+
     @State private var mode: Mode = .calendar
     @State private var month = DateUtil.monthKey(DateUtil.todayKey())
     @State private var filterCycleID: Int64 = 0       // 0 = 全部
@@ -111,12 +119,11 @@ struct HistoryView: View {
         .font(.system(size: 13))
     }
 
-    // MARK: 日历
+    // MARK: 日历（真日历：前后用相邻月份日期补齐成完整周）
 
     private var calendarBody: some View {
-        let grid = DateUtil.monthGrid(month)
+        let days = DateUtil.fullMonthGrid(month)
         let relapses = store.relapseSet()
-        let starts = store.cycleStartSet()
         let withRecord = store.recordSet()
 
         return ScrollView {
@@ -130,17 +137,14 @@ struct HistoryView: View {
                     }
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-                    ForEach(0..<grid.blanks, id: \.self) { _ in
-                        Color.clear.frame(height: 64)
-                    }
-                    ForEach(grid.days, id: \.self) { day in
+                    ForEach(days, id: \.self) { day in
                         CalendarCell(
                             day: day,
                             isToday: day == store.todayKey,
                             isFuture: day > store.todayKey,
                             hasRecord: withRecord.contains(day),
                             isRelapse: relapses.contains(day),
-                            isCycleStart: starts.contains(day),
+                            isOtherMonth: !day.hasPrefix(month),
                             cycleColor: cycleColor(for: day)
                         )
                         .onTapGesture { selectedDate = DaySelection(day: day) }
@@ -156,7 +160,6 @@ struct HistoryView: View {
 
     private var legend: some View {
         HStack(spacing: 16) {
-            LegendDot(color: .accentColor, label: "周期开始")
             HStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 3).fill(Color.blue.opacity(0.18)).frame(width: 10, height: 10)
                 Text("周期日（同周期同色）")
@@ -184,22 +187,22 @@ struct HistoryView: View {
     // MARK: 时间线
 
     private var timelineBody: some View {
-        // 与日历同步：只显示当前选中月份的记录
-        let items = filteredRecords.filter { $0.date.hasPrefix(month) }
+        let items = timelineItems
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 if items.isEmpty {
-                    EmptyHint(icon: "tray", title: "没有符合条件的记录", detail: "调整筛选条件，或先去填写每日记录。")
+                    EmptyHint(icon: "tray", title: "本月没有符合条件的记录", detail: "调整筛选条件，或切换月份查看其他时间。")
                 }
-                ForEach(items) { r in
+                ForEach(items) { item in
                     TimelineEntry(
-                        record: r,
-                        relapseNote: store.relapses.first { $0.date == r.date }?.note,
-                        cycleColor: cycleColor(for: r.date),
-                        cycleLabel: cycleIndex(for: r.date).map { "第 \($0) 段" },
+                        date: item.date,
+                        record: item.record,
+                        relapseNote: item.relapseNote,
+                        cycleColor: cycleColor(for: item.date),
+                        cycleLabel: cycleIndex(for: item.date).map { "第 \($0) 段" },
                         isExpanded: Binding(
-                            get: { expandedDays.contains(r.date) },
-                            set: { if $0 { expandedDays.insert(r.date) } else { expandedDays.remove(r.date) } }
+                            get: { expandedDays.contains(item.date) },
+                            set: { if $0 { expandedDays.insert(item.date) } else { expandedDays.remove(item.date) } }
                         )
                     )
                 }
@@ -208,18 +211,39 @@ struct HistoryView: View {
         }
     }
 
-    private var filteredRecords: [DailyRecord] {
-        store.records.filter { r in
-            if filterRelapseOnly && !store.relapseSet().contains(r.date) { return false }
-            if filterWithRecords && r.freeText == nil && r.perception == nil && r.mood == nil && r.state == nil { return false }
-            if filterCycleID != 0 {
-                guard let cycle = store.cycles.first(where: { $0.id == filterCycleID }),
-                      let d = DateUtil.days(from: cycle.startDate, to: r.date), d >= 0 else { return false }
-                let end = cycle.endDate ?? store.todayKey
-                if let e = DateUtil.days(from: r.date, to: end), e < 0 { return false }
-            }
+    /// 与日历同一份数据：当前月份的每日记录 + 破戒日（即使当天没写记录也会出现）
+    private var timelineItems: [TimelineItem] {
+        let relapseByDay = Dictionary(uniqueKeysWithValues: store.relapses.map { ($0.date, $0.note) })
+
+        func inSelectedCycle(_ day: String) -> Bool {
+            guard filterCycleID != 0 else { return true }
+            guard let cycle = store.cycles.first(where: { $0.id == filterCycleID }),
+                  let d = DateUtil.days(from: cycle.startDate, to: day), d >= 0 else { return false }
+            let end = cycle.endDate ?? store.todayKey
+            if let e = DateUtil.days(from: day, to: end), e < 0 { return false }
             return true
         }
+
+        let monthRecords = store.records.filter { r in
+            guard r.date.hasPrefix(month) else { return false }
+            if filterRelapseOnly && relapseByDay[r.date] == nil { return false }
+            if filterWithRecords && r.freeText == nil && r.perception == nil && r.mood == nil && r.state == nil { return false }
+            return inSelectedCycle(r.date)
+        }
+
+        var items: [TimelineItem] = monthRecords.map {
+            TimelineItem(date: $0.date, record: $0, relapseNote: relapseByDay[$0.date])
+        }
+
+        // 破戒日但当天没写记录：也要出现在时间线上
+        let recordDates = Set(monthRecords.map { $0.date })
+        for rel in store.relapses where rel.date.hasPrefix(month) && !recordDates.contains(rel.date) {
+            if filterWithRecords { continue }   // 「有记录」筛选下不显示纯破戒日
+            if !inSelectedCycle(rel.date) { continue }
+            items.append(TimelineItem(date: rel.date, record: nil, relapseNote: rel.note))
+        }
+
+        return items.sorted { $0.date > $1.date }
     }
 }
 
@@ -241,27 +265,23 @@ struct CalendarCell: View {
     let isFuture: Bool
     let hasRecord: Bool
     let isRelapse: Bool
-    let isCycleStart: Bool
+    var isOtherMonth: Bool = false
     var cycleColor: Color? = nil
 
     var body: some View {
         VStack(spacing: 4) {
             Text(dayNumber)
-                .font(.system(size: 15, weight: isRelapse ? .bold : (isToday ? .bold : .regular), design: .rounded))
+                .font(.system(size: 15, weight: isRelapse || isToday ? .bold : .regular, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(textColor)
-            HStack(spacing: 3) {
-                if isCycleStart {
-                    Circle().fill(isRelapse ? Color.white : Color.accentColor).frame(width: 6, height: 6)
-                }
-                if hasRecord {
-                    // 有记录：插画图标（绿色对勾；破戒日用白色以在红底上可读）
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(isRelapse ? .white : .green)
-                }
+            if hasRecord {
+                // 有记录：插画图标（绿色对勾；破戒日用白色以在红底上可读）
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(isRelapse ? .white : .green.opacity(isOtherMonth ? 0.45 : 1))
+            } else {
+                Color.clear.frame(height: 10)
             }
-            .frame(height: 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(cellBackground)
@@ -277,17 +297,17 @@ struct CalendarCell: View {
     }
 
     private var textColor: Color {
-        if isFuture { return .secondary.opacity(0.35) }
         // 破戒日：实心红底 + 白色数字，一眼可辨
         if isRelapse { return .white }
+        if isOtherMonth || isFuture { return .secondary.opacity(0.35) }
         return .primary
     }
 
     private var cellBackground: Color {
         // 破戒日：高饱和红色警告
         if isRelapse { return Color.red.opacity(0.85) }
-        // 周期日：同周期同色，不同周期不同色
-        if let cc = cycleColor { return cc.opacity(0.14) }
+        // 周期日：同周期同色，不同周期不同色（跨月的周期继续延伸配色）
+        if let cc = cycleColor { return cc.opacity(isOtherMonth ? 0.07 : 0.14) }
         return Color.primary.opacity(0.03)
     }
 
@@ -295,14 +315,15 @@ struct CalendarCell: View {
         RoundedRectangle(cornerRadius: 8)
             .strokeBorder(
                 isRelapse ? Color.red.opacity(0.9) : (isToday ? Color.accentColor : (cycleColor ?? Color.primary.opacity(0.06)).opacity(0.35)),
-                lineWidth: isRelapse ? 1.5 : (isToday ? 1.5 : 1)
+                lineWidth: isRelapse || isToday ? 1.5 : 1
             )
     }
 }
 
-/// 时间线卡片：按周期着色（同周期同色），默认折叠，点击头部展开，详情可选中复制
+/// 时间线卡片：与日历配色一致（周期同色底、破戒日实心红底白字），默认折叠，头部点击展开，详情可选中复制
 struct TimelineEntry: View {
-    let record: DailyRecord
+    let date: String
+    let record: DailyRecord?
     var relapseNote: String?
     var cycleColor: Color? = nil
     var cycleLabel: String? = nil
@@ -310,31 +331,33 @@ struct TimelineEntry: View {
 
     @EnvironmentObject private var store: Store
 
+    private var isRelapse: Bool { relapseNote != nil }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // 摘要行（始终显示，点击切换展开/折叠）
             HStack(spacing: 8) {
-                Text(DateUtil.display(record.date, style: store.dateStyle))
+                Text(DateUtil.display(date, style: store.dateStyle))
                     .font(.system(size: 14, weight: .semibold).monospacedDigit())
                     .textSelection(.enabled)
                 Text(weekdayText)
                     .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(textColor.opacity(0.75))
                 if let cycleLabel {
-                    Chip(text: cycleLabel, selected: true, tint: cycleColor ?? .accentColor)
+                    Chip(text: cycleLabel, selected: true, tint: chipTint)
                 }
-                if relapseNote != nil {
-                    Chip(text: "破戒日", selected: true, tint: .red)
+                if isRelapse {
+                    Chip(text: "破戒日", selected: true, tint: chipTint)
                 }
-                if let mood = record.mood { Chip(text: mood, selected: true) }
-                ForEach(record.emotions.prefix(3), id: \.self) { e in
-                    Chip(text: e, selected: true, tint: .purple)
+                if let mood = record?.mood { Chip(text: mood, selected: true, tint: chipTint) }
+                ForEach((record?.emotions ?? []).prefix(3), id: \.self) { e in
+                    Chip(text: e, selected: true, tint: chipTint)
                 }
-                if let state = record.state { Chip(text: state, selected: true, tint: .teal) }
+                if let state = record?.state { Chip(text: state, selected: true, tint: chipTint) }
                 Spacer()
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(textColor.opacity(0.7))
             }
             .contentShape(Rectangle())
             .onTapGesture {
@@ -345,7 +368,7 @@ struct TimelineEntry: View {
             if !isExpanded {
                 Text(summaryLine)
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(textColor.opacity(0.85))
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
@@ -356,40 +379,38 @@ struct TimelineEntry: View {
 
             // 展开详情（文本可选中复制；顺序与每日记录一致：行为 → 感知 → 自由）
             if isExpanded {
-                Divider()
+                detailDivider
                 if !behaviorLines.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("今日行为情况")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
+                        sectionTitle("今日行为情况")
                         ForEach(behaviorLines, id: \.self) { line in
                             Text("· \(line)")
                                 .font(.system(size: 13))
                                 .textSelection(.enabled)
                         }
-                        if let note = record.behaviorNote {
+                        if let note = record?.behaviorNote {
                             Text("备注：\(note)")
                                 .font(.system(size: 13))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(textColor.opacity(0.8))
                                 .textSelection(.enabled)
                         }
                     }
                 }
-                if let p = record.perception, !p.isEmpty {
+                if let p = record?.perception, !p.isEmpty {
                     detailBlock("今日变化与感知", p)
                 }
-                if let text = record.freeText, !text.isEmpty {
+                if let text = record?.freeText, !text.isEmpty {
                     detailBlock("自由记录", text)
                 }
-                if relapseNote != nil {
+                if isRelapse {
                     Text("破戒备注：\(relapseNote!)")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.red)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(textColor)
                         .textSelection(.enabled)
                 }
-                Text("最后更新：\(DateUtil.displayDateTime(record.updatedAt))")
+                Text("最后更新：\(record.map { DateUtil.displayDateTime($0.updatedAt) } ?? "—")")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(textColor.opacity(0.55))
                     .textSelection(.enabled)
             }
         }
@@ -398,30 +419,51 @@ struct TimelineEntry: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(cardBorder, lineWidth: 1)
+                .strokeBorder(cardBorder, lineWidth: isRelapse ? 1.5 : 1)
         )
     }
 
-    // MARK: 子视图与数据
+    // MARK: 配色（与日历保持一致）
 
-    /// 破戒日用醒目的红色警告底色；否则按周期底色着色
+    /// 破戒日：与日历相同的实心红底，文字全部用白色保证可读
     private var cardBackground: Color {
-        if relapseNote != nil { return Color.red.opacity(0.22) }
-        if let cc = cycleColor { return cc.opacity(0.08) }
+        if isRelapse { return Color.red.opacity(0.85) }
+        if let cc = cycleColor { return cc.opacity(0.14) }
         return Color(nsColor: .controlBackgroundColor)
     }
 
     private var cardBorder: Color {
-        if relapseNote != nil { return Color.red.opacity(0.65) }
-        if let cc = cycleColor { return cc.opacity(0.30) }
+        if isRelapse { return Color.red.opacity(0.9) }
+        if let cc = cycleColor { return cc.opacity(0.35) }
         return Color.primary.opacity(0.08)
+    }
+
+    /// 破戒日红底上用白字；其余用系统默认文字色
+    private var textColor: Color {
+        isRelapse ? .white : Color.primary
+    }
+
+    private var chipTint: Color {
+        isRelapse ? .white : (cycleColor ?? .accentColor)
+    }
+
+    private var detailDivider: some View {
+        Rectangle()
+            .fill(textColor.opacity(0.25))
+            .frame(height: 1)
+    }
+
+    // MARK: 子视图与数据
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(textColor.opacity(0.75))
     }
 
     private func detailBlock(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
+            sectionTitle(title)
             Text(text)
                 .font(.system(size: 13))
                 .fixedSize(horizontal: false, vertical: true)
@@ -430,14 +472,16 @@ struct TimelineEntry: View {
     }
 
     private var summaryLine: String {
-        if let text = record.freeText, !text.isEmpty { return text }
-        if let p = record.perception, !p.isEmpty { return p }
-        if let note = relapseNote { return "破戒备注：\(note)" }
-        if record.mood != nil || !record.emotions.isEmpty || record.state != nil { return "（仅结构化记录）" }
+        if isRelapse && record == nil { return "破戒备注：\(relapseNote ?? "")" }
+        if let text = record?.freeText, !text.isEmpty { return text }
+        if let p = record?.perception, !p.isEmpty { return p }
+        if isRelapse { return "破戒备注：\(relapseNote ?? "")" }
+        if record?.mood != nil || !(record?.emotions.isEmpty ?? true) || record?.state != nil { return "（仅结构化记录）" }
         return "（点击展开查看详情）"
     }
 
     private var behaviorLines: [String] {
+        guard let record else { return [] }
         var lines: [String] = []
         if let v = record.contactedPorn { lines.append("接触色情内容：\(v ? "是" : "否")") }
         if let v = record.targetBehavior { lines.append("发生目标行为：\(v ? "是" : "否")") }
@@ -446,7 +490,7 @@ struct TimelineEntry: View {
     }
 
     private var weekdayText: String {
-        guard let d = DateUtil.date(record.date) else { return "" }
+        guard let d = DateUtil.date(date) else { return "" }
         let names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
         return names[Calendar.current.component(.weekday, from: d) - 1]
     }

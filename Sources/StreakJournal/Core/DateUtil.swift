@@ -96,6 +96,25 @@ enum DateUtil {
         return (blanks, days)
     }
 
+    /// 真日历网格：前后用相邻月份的日期补齐成完整周（7 的倍数个日期），不留空格
+    static func fullMonthGrid(_ monthKey: String) -> [String] {
+        guard let first = date(monthKey + "-01"),
+              let range = Calendar.current.range(of: .day, in: .month, for: first) else {
+            return []
+        }
+        let weekday = Calendar.current.component(.weekday, from: first)
+        let leading = (weekday == 1) ? 6 : (weekday - 2)   // 周一为首列，1 号前的空位数
+        let totalCells = ((leading + range.count) + 6) / 7 * 7
+        let firstDate = startOfDay(first)
+        var result: [String] = []
+        for i in 0..<totalCells {
+            if let d = Calendar.current.date(byAdding: .day, value: i - leading, to: firstDate) {
+                result.append(key(d))
+            }
+        }
+        return result
+    }
+
     // MARK: 显示格式
 
     enum DateStyle: String, CaseIterable, Identifiable {
