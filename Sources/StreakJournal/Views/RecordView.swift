@@ -91,7 +91,7 @@ struct RecordView: View {
                     get: { DateUtil.date(currentDate) ?? Date() },
                     set: { currentDate = DateUtil.key($0) }
                 ),
-                range: ...Date()
+                range: Date.distantPast...Date()
             )
 
             Spacer()

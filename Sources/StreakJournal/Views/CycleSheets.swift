@@ -122,7 +122,7 @@ struct BackdatedRelapseSheet: View {
                         get: { DateUtil.date(date) ?? Date() },
                         set: { date = DateUtil.key($0) }
                     ),
-                    range: ...Date()
+                    range: Date.distantPast...Date()
                 )
             }
 

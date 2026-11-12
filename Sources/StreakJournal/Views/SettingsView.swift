@@ -142,7 +142,7 @@ struct SettingsView: View {
             SettingsGroup {
                 if let cycle = store.activeCycle {
                     SettingRow(icon: "flag.checkered", color: .green, title: "当前周期开始日期", subtitle: "调整后坚持天数会按新日期重新计算") {
-                        CalendarDateField(date: $adjustStart, range: ...Date())
+                        CalendarDateField(date: $adjustStart, range: Date.distantPast...Date())
                         PillButton(title: "应用调整", color: .blue) { showAdjustConfirm = true }
                             .disabled(DateUtil.key(adjustStart) == cycle.startDate)
                     }
@@ -309,7 +309,7 @@ struct CycleEditSheet: View {
                         get: { DateUtil.date(cycle.startDate) ?? Date() },
                         set: { cycle.startDate = DateUtil.key($0) }
                     ),
-                    range: ...Date()
+                    range: Date.distantPast...Date()
                 )
             }
 
@@ -324,7 +324,7 @@ struct CycleEditSheet: View {
                             get: { cycle.endDate.flatMap { DateUtil.date($0) } ?? Date() },
                             set: { cycle.endDate = DateUtil.key($0) }
                         ),
-                        range: ...Date()
+                        range: Date.distantPast...Date()
                     )
                 }
             }
