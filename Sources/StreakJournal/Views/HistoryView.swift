@@ -120,6 +120,7 @@ struct HistoryView: View {
             Toggle("有记录", isOn: $filterWithRecords)
         }
         .font(.system(size: 13))
+        .fixedSize()
     }
 
     // MARK: 日历（真日历：前后用相邻月份日期补齐成完整周）
