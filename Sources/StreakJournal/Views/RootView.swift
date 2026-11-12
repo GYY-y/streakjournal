@@ -3,8 +3,7 @@ import SwiftUI
 enum Page: String, CaseIterable, Identifiable {
     case home = "首页"
     case record = "每日记录"
-    case history = "历史记录"
-    case stats = "统计"
+    case history = "统计"
     case settings = "设置"
     case about = "关于"
 
@@ -12,8 +11,7 @@ enum Page: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "figure.mind.and.body"
         case .record: return "square.and.pencil"
-        case .history: return "clock.arrow.circlepath"
-        case .stats: return "chart.bar.xaxis"
+        case .history: return "chart.bar.xaxis"
         case .settings: return "gearshape"
         case .about: return "info.circle"
         }
@@ -55,14 +53,15 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.25), value: store.lastMessage)
     }
 
-    // MARK: 顶部标签栏（参考图风格：居中胶囊分段）
+    // MARK: 顶部标签栏：固定标题「坚持记录」+ 居中胶囊分段
 
     private var topBar: some View {
-        HStack {
+        VStack(spacing: 8) {
+            // 每次点击标签都会展示的标题，固定为「坚持记录」
             Text("坚持记录")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
-            Spacer()
+                .font(.system(size: 17, weight: .semibold))
+                .id(nav.page)
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
             Picker("", selection: $nav.page) {
                 ForEach(Page.allCases) { page in
                     Text(page.rawValue).tag(page)
@@ -70,15 +69,11 @@ struct RootView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 560)
-            Spacer()
-            // 等宽占位，让标签真正居中
-            Text("坚持记录")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.clear)
+            .frame(width: 480)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .animation(.easeOut(duration: 0.25), value: nav.page)
     }
 
     @ViewBuilder
@@ -87,7 +82,6 @@ struct RootView: View {
         case .home: HomeView()
         case .record: RecordView()
         case .history: HistoryView()
-        case .stats: StatsView()
         case .settings: SettingsView()
         case .about: AboutView()
         }

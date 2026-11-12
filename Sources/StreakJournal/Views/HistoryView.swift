@@ -15,6 +15,7 @@ struct HistoryView: View {
     @State private var filterRelapseOnly = false
     @State private var filterWithRecords = false
     @State private var selectedDate: DaySelection?
+    @State private var expandedDays: Set<String> = []  // 时间线展开的日期，默认全部折叠
 
     struct DaySelection: Identifiable {
         let day: String
@@ -31,7 +32,7 @@ struct HistoryView: View {
                 timelineBody
             }
         }
-        .navigationTitle("历史记录")
+        .navigationTitle("统计")
         .sheet(item: $selectedDate) { selection in
             RecordDetailSheet(date: selection.day)
         }
@@ -154,22 +155,31 @@ struct HistoryView: View {
     private var timelineBody: some View {
         let items = filteredRecords
         return ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: 10) {
                 if items.isEmpty {
                     EmptyHint(icon: "tray", title: "没有符合条件的记录", detail: "调整筛选条件，或先去填写每日记录。")
                 }
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, r in
+                ForEach(items) { r in
                     TimelineEntry(
                         record: r,
                         relapseNote: store.relapses.first { $0.date == r.date }?.note,
-                        isFirst: index == 0,
-                        isLast: index == items.count - 1
+                        isExpanded: Binding(
+                            get: { expandedDays.contains(r.date) },
+                            set: { if $0 { expandedDays.insert(r.date) } else { expandedDays.remove(r.date) } }
+                        )
                     )
-                    .onTapGesture { selectedDate = DaySelection(day: r.date) }
+                    .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { toggleExpand(r.date) } }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .padding(20)
+        }
+    }
+
+    private func toggleExpand(_ day: String) {
+        if expandedDays.contains(day) {
+            expandedDays.remove(day)
+        } else {
+            expandedDays.insert(day)
         }
     }
 
@@ -260,84 +270,117 @@ struct CalendarCell: View {
     }
 }
 
-/// 时间线单条目：日期列 + 竖线圆点 + 内容
+/// 时间线卡片：默认折叠显示摘要，点击展开完整详情，再次点击折叠
 struct TimelineEntry: View {
     let record: DailyRecord
     var relapseNote: String?
-    var isFirst: Bool
-    var isLast: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            // 左：日期列
-            VStack(alignment: .leading, spacing: 2) {
-                Text(DateUtil.display(record.date, style: store.dateStyle))
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
-                Text(weekdayText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 92, alignment: .leading)
-            .padding(.top, 2)
-
-            // 中：竖线 + 圆点
-            VStack(spacing: 0) {
-                if !isFirst {
-                    Rectangle().fill(lineColor).frame(width: 2).frame(maxHeight: .infinity)
-                } else {
-                    Color.clear.frame(width: 2, height: 10)
-                }
-                Circle()
-                    .fill(dotColor)
-                    .frame(width: 12, height: 12)
-                    .overlay(Circle().strokeBorder(Color(nsColor: .controlBackgroundColor), lineWidth: 2))
-                if !isLast {
-                    Rectangle().fill(lineColor).frame(width: 2).frame(maxHeight: .infinity)
-                } else {
-                    Color.clear.frame(width: 2, height: 10)
-                }
-            }
-            .frame(width: 16)
-
-            // 右：内容
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    if relapseNote != nil {
-                        Chip(text: "破戒日", selected: true, tint: .orange)
-                    }
-                    if let mood = record.mood { Chip(text: "心态 \(mood)", selected: true) }
-                    ForEach(record.emotions.prefix(3), id: \.self) { e in
-                        Chip(text: e, selected: true, tint: .purple)
-                    }
-                    if let state = record.state { Chip(text: state, selected: true, tint: .teal) }
-                }
-                if let text = record.freeText, !text.isEmpty {
-                    Text(text)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                } else if let p = record.perception, !p.isEmpty {
-                    Text(p)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(2)
-                }
-            }
-            .padding(.bottom, 18)
-
-            Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-    }
+    @Binding var isExpanded: Bool
 
     @EnvironmentObject private var store: Store
 
-    private var lineColor: Color { Color.primary.opacity(0.10) }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 摘要行（始终显示）
+            HStack(spacing: 8) {
+                Text(DateUtil.display(record.date, style: store.dateStyle))
+                    .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                Text(weekdayText)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                if relapseNote != nil {
+                    Chip(text: "破戒日", selected: true, tint: .orange)
+                }
+                if let mood = record.mood { Chip(text: mood, selected: true) }
+                ForEach(record.emotions.prefix(3), id: \.self) { e in
+                    Chip(text: e, selected: true, tint: .purple)
+                }
+                if let state = record.state { Chip(text: state, selected: true, tint: .teal) }
+                Spacer()
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
 
-    private var dotColor: Color {
-        if relapseNote != nil { return .orange }
-        if record.mood != nil || !record.emotions.isEmpty { return Color.accentColor }
-        return .secondary.opacity(0.5)
+            // 一行摘要（折叠时）
+            if !isExpanded {
+                Text(summaryLine)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            // 展开详情
+            if isExpanded {
+                Divider()
+                if let p = record.perception, !p.isEmpty {
+                    detailBlock("今日变化与感知", p)
+                }
+                if let text = record.freeText, !text.isEmpty {
+                    detailBlock("自由记录", text)
+                }
+                if !behaviorLines.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("今日行为情况")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        ForEach(behaviorLines, id: \.self) { line in
+                            Text("· \(line)")
+                                .font(.system(size: 13))
+                        }
+                        if let note = record.behaviorNote {
+                            Text("备注：\(note)")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                if relapseNote != nil {
+                    Text("破戒备注：\(relapseNote!)")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.orange)
+                }
+                Text("最后更新：\(DateUtil.displayDateTime(record.updatedAt))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isExpanded ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+    }
+
+    // MARK: 子视图与数据
+
+    private func detailBlock(_ title: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text(text)
+                .font(.system(size: 13))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var summaryLine: String {
+        if let text = record.freeText, !text.isEmpty { return text }
+        if let p = record.perception, !p.isEmpty { return p }
+        if let note = relapseNote { return "破戒备注：\(note)" }
+        if record.mood != nil || !record.emotions.isEmpty || record.state != nil { return "（仅结构化记录）" }
+        return "（点击展开查看详情）"
+    }
+
+    private var behaviorLines: [String] {
+        var lines: [String] = []
+        if let v = record.contactedPorn { lines.append("接触色情内容：\(v ? "是" : "否")") }
+        if let v = record.targetBehavior { lines.append("发生目标行为：\(v ? "是" : "否")") }
+        if let v = record.strongUrge { lines.append("出现明显冲动：\(v ? "是" : "否")") }
+        return lines
     }
 
     private var weekdayText: String {
