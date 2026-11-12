@@ -250,6 +250,54 @@ struct TriStateField: View {
     }
 }
 
+/// Apple 风格日期字段：显示格式化日期，点击弹出日历面板选择
+struct CalendarDateField: View {
+    @Binding var date: Date
+    var range: ClosedRange<Date>? = nil
+    var maxWidth: CGFloat = 150
+
+    @State private var showPicker = false
+
+    var body: some View {
+        Button { showPicker = true } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Text(DateUtil.key(date))
+                    .font(.system(size: 13).monospacedDigit())
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.05)))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.15), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showPicker, arrowEdge: .bottom) {
+            VStack {
+                if let range {
+                    DatePicker("", selection: $date, in: range, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .padding(12)
+                } else {
+                    DatePicker("", selection: $date, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .padding(12)
+                }
+            }
+            .frame(width: 330)
+            .onChange(of: date) { _, _ in
+                showPicker = false
+            }
+        }
+    }
+}
+
 /// 多行备注文本域（统一外观 + 占位符）
 struct NoteEditor: View {
     @Binding var text: String

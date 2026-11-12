@@ -142,14 +142,7 @@ struct SettingsView: View {
             SettingsGroup {
                 if let cycle = store.activeCycle {
                     SettingRow(icon: "flag.checkered", color: .green, title: "当前周期开始日期", subtitle: "调整后坚持天数会按新日期重新计算") {
-                        DatePicker(
-                            "",
-                            selection: $adjustStart,
-                            in: ...Date(),
-                            displayedComponents: .date
-                        )
-                        .labelsHidden()
-                        .frame(width: 130)
+                        CalendarDateField(date: $adjustStart, range: ...Date())
                         PillButton(title: "应用调整", color: .blue) { showAdjustConfirm = true }
                             .disabled(DateUtil.key(adjustStart) == cycle.startDate)
                     }
@@ -307,27 +300,33 @@ struct CycleEditSheet: View {
             Text("编辑周期")
                 .font(.title2.weight(.semibold))
 
-            DatePicker(
-                "开始日期",
-                selection: Binding(
-                    get: { DateUtil.date(cycle.startDate) ?? Date() },
-                    set: { cycle.startDate = DateUtil.key($0) }
-                ),
-                in: ...Date(),
-                displayedComponents: .date
-            )
+            HStack(spacing: 12) {
+                Text("开始日期")
+                    .font(.system(size: 13))
+                    .frame(width: 70, alignment: .leading)
+                CalendarDateField(
+                    date: Binding(
+                        get: { DateUtil.date(cycle.startDate) ?? Date() },
+                        set: { cycle.startDate = DateUtil.key($0) }
+                    ),
+                    range: ...Date()
+                )
+            }
 
             Toggle("设置结束日期", isOn: $hasEnd)
             if hasEnd {
-                DatePicker(
-                    "结束日期",
-                    selection: Binding(
-                        get: { cycle.endDate.flatMap { DateUtil.date($0) } ?? Date() },
-                        set: { cycle.endDate = DateUtil.key($0) }
-                    ),
-                    in: ...Date(),
-                    displayedComponents: .date
-                )
+                HStack(spacing: 12) {
+                    Text("结束日期")
+                        .font(.system(size: 13))
+                        .frame(width: 70, alignment: .leading)
+                    CalendarDateField(
+                        date: Binding(
+                            get: { cycle.endDate.flatMap { DateUtil.date($0) } ?? Date() },
+                            set: { cycle.endDate = DateUtil.key($0) }
+                        ),
+                        range: ...Date()
+                    )
+                }
             }
 
             Text("备注（可选）")

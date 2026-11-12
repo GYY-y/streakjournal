@@ -86,17 +86,13 @@ struct RecordView: View {
 
             Spacer()
 
-            DatePicker(
-                "",
-                selection: Binding(
+            CalendarDateField(
+                date: Binding(
                     get: { DateUtil.date(currentDate) ?? Date() },
                     set: { currentDate = DateUtil.key($0) }
                 ),
-                in: ...Date(),
-                displayedComponents: .date
+                range: ...Date()
             )
-            .datePickerStyle(.field)
-            .labelsHidden()
 
             Spacer()
 

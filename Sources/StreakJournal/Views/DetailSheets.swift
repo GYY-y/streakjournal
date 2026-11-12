@@ -138,7 +138,7 @@ struct RecordContent: View {
                 }
             }
 
-            Text("最后更新：\(record.updatedAt)")
+            Text("最后更新：\(DateUtil.displayDateTime(record.updatedAt))")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }

@@ -35,20 +35,21 @@ struct NewCycleSheet: View {
 
             SectionCard(title: "新周期开始日期") {
                 HStack {
-                    Button("今天") { newStart = relapseMarked ? DateUtil.todayKey() : DateUtil.todayKey() }
+                    Button("今天") { newStart = DateUtil.todayKey() }
                     Button("明天") { newStart = DateUtil.addDays(DateUtil.todayKey(), 1) }
                     Spacer()
                 }
-                DatePicker(
-                    "开始日期",
-                    selection: Binding(
-                        get: { DateUtil.date(newStart) ?? Date() },
-                        set: { newStart = DateUtil.key($0) }
-                    ),
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.field)
-                .labelsHidden()
+                HStack(spacing: 12) {
+                    Text("开始日期")
+                        .font(.system(size: 13))
+                        .frame(width: 70, alignment: .leading)
+                    CalendarDateField(
+                        date: Binding(
+                            get: { DateUtil.date(newStart) ?? Date() },
+                            set: { newStart = DateUtil.key($0) }
+                        )
+                    )
+                }
                 if relapseMarked {
                     Text("若标记破戒，建议从明天开始新周期，让破戒当天保持独立。")
                         .font(.caption)
@@ -112,16 +113,18 @@ struct BackdatedRelapseSheet: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
-            DatePicker(
-                "破戒日期",
-                selection: Binding(
-                    get: { DateUtil.date(date) ?? Date() },
-                    set: { date = DateUtil.key($0) }
-                ),
-                in: ...Date(),
-                displayedComponents: .date
-            )
-            .datePickerStyle(.field)
+            HStack(spacing: 12) {
+                Text("破戒日期")
+                    .font(.system(size: 13))
+                    .frame(width: 70, alignment: .leading)
+                CalendarDateField(
+                    date: Binding(
+                        get: { DateUtil.date(date) ?? Date() },
+                        set: { date = DateUtil.key($0) }
+                    ),
+                    range: ...Date()
+                )
+            }
 
             NoteEditor(text: $note, placeholder: "备注（可选）：发生了什么、当时的想法……")
 

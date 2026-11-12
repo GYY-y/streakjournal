@@ -17,6 +17,21 @@ enum DateUtil {
 
     static func key(_ date: Date) -> String { keyFormatter.string(from: date) }
 
+    static let dateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        return f
+    }()
+
+    /// ISO8601 时间字符串 → "yyyy-MM-dd HH:mm:ss"；解析失败时原样返回
+    static func displayDateTime(_ iso: String) -> String {
+        guard !iso.isEmpty else { return "" }
+        if let d = timeFormatter.date(from: iso) { return dateTimeFormatter.string(from: d) }
+        return iso
+    }
+
     static func date(_ key: String) -> Date? { keyFormatter.date(from: key) }
 
     static func now() -> String { timeFormatter.string(from: Date()) }
