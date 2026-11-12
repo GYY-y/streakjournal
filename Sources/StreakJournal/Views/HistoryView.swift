@@ -213,7 +213,7 @@ struct HistoryView: View {
 
     /// 与日历同一份数据：当前月份的每日记录 + 破戒日（即使当天没写记录也会出现）
     private var timelineItems: [TimelineItem] {
-        let relapseByDay = Dictionary(uniqueKeysWithValues: store.relapses.map { ($0.date, $0.note) })
+        let relapseByDay = Dictionary(uniqueKeysWithValues: store.relapses.map { ($0.date, $0.note ?? "") })
 
         func inSelectedCycle(_ day: String) -> Bool {
             guard filterCycleID != 0 else { return true }
