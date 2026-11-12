@@ -1,66 +1,126 @@
-# 坚持记录（StreakJournal）
+# 循迹 · StreakJournal
 
-个人每日记录与坚持周期管理的 macOS 原生应用。
+**一款纯原生 SwiftUI 打造的 macOS 坚持记录应用** —— 记录你的每日坚持、管理周期、标记破戒、点亮勋章。
 
-- **技术栈**：纯 Swift + SwiftUI，零第三方依赖，本地 SQLite（系统库）
-- **平台**：仅 Apple Silicon（M 系列），macOS 14+
-- **分发**：GitHub Releases 提供 DMG，不上架 App Store
-- **数据**：完全本地保存，无需账号、无需网络、无广告无付费
+[![Release](https://img.shields.io/github/v/release/GYY-y/streakjournal?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&logo=github)](https://github.com/GYY-y/streakjournal/releases/latest)
+[![Build](https://github.com/GYY-y/streakjournal/actions/workflows/release.yml/badge.svg)](https://github.com/GYY-y/streakjournal/actions/workflows/release.yml)
+![Platform](https://img.shields.io/badge/macOS-14%2B%20Apple%20Silicon-black?logo=apple)
+![Swift](https://img.shields.io/badge/Swift-SwiftUI-orange?logo=swift)
 
-## 功能（对应 PRD V1.0）
+> 仅支持 **Apple Silicon (M 系列) Mac**，macOS 14.0+。不上架 App Store，通过 GitHub Releases 分发。
 
-| 页面 | 功能 |
-|---|---|
-| 首页 | 当前坚持天数、开始日期、历史最长、鼓励语（按天数分档）、今日状态、开启新周期 / 补录破戒 |
-| 每日记录 | 心态（单选）、情绪（多选）、状态、变化感知、自由记录、行为情况（三态独立字段）；自动保存 |
-| 历史记录 | 月历视图（周期开始 / 坚持中 / 破戒 / 有记录四类标记）、时间线视图、按周期 / 破戒 / 有记录筛选 |
-| 统计 | 基础统计、周度汇总、月度汇总（周期起止、破戒次数、最长周期） |
-| 设置 | 目标天数、主题（浅色 / 深色 / 跟随系统）、日期格式、周期与破戒记录管理、导出 / 导入 JSON、自动 / 手动备份与恢复 |
+---
 
-## 核心规则（PRD 4.3）
+## 界面预览
 
-- 每次坚持是一条独立周期；开启新周期**不删除任何历史**
-- 破戒日独立保存，不属于任何周期、不计入坚持天数（周期 1 结束于破戒日前一天，新周期从次日或用户指定日开始）
-- 补录破戒会自动调整对应周期并重新计算
-- 删除每日记录不影响周期数据
-- 未填写记录的日期不会被认定为"坚持成功"
+| 首页 | 每日记录 |
+| :---: | :---: |
+| ![首页](docs/screenshots/home.png) | ![每日记录](docs/screenshots/record.png) |
 
-## 数据位置与备份
+| 统计（日历 + 时间线） | 勋章墙 |
+| :---: | :---: |
+| ![统计](docs/screenshots/history.png) | ![勋章](docs/screenshots/badges.png) |
 
-- 数据库：`~/Library/Application Support/StreakJournal/streakjournal.db`
-- 自动备份：启动时距上次备份超过 24 小时则自动备份，保留最近 10 份
-- 手动备份：菜单 File → 手动备份（⌘⇧B）或设置页
-- 导出 / 导入：设置页，JSON 格式，恢复前有覆盖确认
+| 设置 |
+| :---: |
+| ![设置](docs/screenshots/settings.png) |
 
-## 本地开发构建
+---
 
-```bash
-./scripts/build_app.sh     # 编译 + 图标 + 组装 .app + ad-hoc 签名
-./scripts/make_dmg.sh      # 制作 DMG（拖拽安装布局）
-open build/StreakJournal.app
+## 功能特性
+
+### 每日记录
+- **自动保存**：写完即存，无需手动点击保存按钮
+- **结构化模板**：今日心态（单选）、情绪（多选）、状态、行为情况三问（是/否/未填写）
+- **自由记录**：不受模板限制的文字备注，想写什么写什么
+- **破戒日独立**：破戒当天独立保存、不计入任何周期的坚持天数，支持补录
+
+### 周期管理
+- 开启新的周期只结束当前周期，**历史记录完整保留**
+- 跨月周期在日历中以真日历（含相邻月份补齐）展示，同周期同色
+- 时间线按月浏览，破戒日以红色警示
+
+### 勋章系统
+- **11 枚连续徽章**（连续 3/7/14/21/30/50/60/90/100/180/365 天）+ **9 枚累计徽章**（累计打卡 10~500 次）
+- 新解锁时全屏撒花庆祝；点击已获得的勋章弹出深色展示卡，撒花聚焦勋章迸发
+
+### 统计视图
+- 日历视图 + 时间线视图，按月切换
+- 按周期、破戒日、有记录筛选
+
+### 菜单栏速览
+- 顶部菜单栏常驻图标，点击弹出**系统原生菜单**（零动画、原生悬停高亮）：
+  - 已坚持天数 / 今日记录状态（未记录红色提醒）
+  - 打开主窗口 / 设置（⌘,）/ 退出（⌘Q）
+
+### 数据与隐私
+- **100% 本地存储**：全部数据只保存在本机 SQLite 数据库，无联网上报
+- **每 12 小时自动备份**一次（保留最近 10 份），无需任何手动操作
+- 支持导出 / 导入 JSON，方便迁移或异地存档
+- 一键重置全部数据（二次确认，自动备份仍保留）
+
+### 检查更新
+- 应用内一键检查 GitHub 最新 Release，有新版本时引导前往下载页
+
+### 多语言
+- 简体中文（默认）/ 繁體中文 / English，切换立即生效
+
+### 其他
+- 浅色 / 深色 / 跟随系统外观
+- 每天一条哲学语录系统通知（本地通知，无需网络）
+
+---
+
+## 下载安装
+
+1. 前往 [**Releases 页面**](https://github.com/GYY-y/streakjournal/releases/latest)
+2. 下载最新版 `StreakJournal-vX.X.X-arm64.dmg`
+3. 打开 DMG，将 **循迹** 拖入 Applications 文件夹
+4. 首次打开若提示"无法验证开发者"：右键点击应用 → **打开**，或在
+   系统设置 → 隐私与安全性 中点击"仍要打开"
+
+> 应用未做开发者签名（开源免费，无公证费用），首次打开需要上述确认，之后正常。
+
+---
+
+## 数据存放位置
+
+```
+~/Library/Application Support/StreakJournal/
+├── streakjournal.db      # SQLite 数据库（全部数据）
+└── backups/              # 自动备份（每 12 小时一次，保留最近 10 份）
 ```
 
-> 说明：本脚本优先使用 SwiftPM 构建；若本机 Command Line Tools 的
-> PackageDescription 库损坏（manifest 链接失败），会自动回退到
-> `swiftc` 直编并使用影子资源目录修复 CLT 的重复 module map 问题。
+- 升级应用、重启电脑不会影响数据
+- 备份与本机数据库在同一块硬盘：建议同时开启 macOS 时间机器做异地保险
+- 应用内可随时导出 JSON 存到网盘 / U 盘
 
-## 发布流程
+---
 
-1. `git tag v1.0.0 && git push origin v1.0.0`
-2. GitHub Actions（macos-14 Apple Silicon runner）自动构建并产出 DMG
-3. DMG 自动附加到对应 Release（含自动 Release Notes）
+## 从源码构建
 
-如需避免 "应用已损坏" 提示：正式分发建议用 Developer ID 签名与公证；
-未签名版本用户需执行 `xattr -cr /Applications/StreakJournal.app`。
+```bash
+git clone https://github.com/GYY-y/streakjournal.git
+cd streakjournal
+bash scripts/build_app.sh     # 编译并组装 StreakJournal.app（产物在 build/）
+bash scripts/make_dmg.sh      # 打包 DMG 安装镜像
+```
 
-## 目录结构
+**技术栈**：Swift + SwiftUI，零第三方依赖；系统 SQLite3 持久化、UNUserNotificationCenter
+本地通知、NSStatusItem 原生菜单。
+CI 使用 GitHub Actions（macos-15 runner）自动构建并发布 Release。
+
+---
+
+## 项目结构
 
 ```
 Sources/StreakJournal/
-  App/       应用入口
-  Core/      数据模型、SQLite、业务逻辑（Store）、日期工具、鼓励语
-  Views/     首页 / 记录 / 历史 / 统计 / 设置 / 组件
-scripts/     构建与打包脚本
-tools/       图标生成器
-.github/     Release 工作流
+├── App/          # 应用入口、菜单栏状态项、每日通知
+├── Core/         # 数据库、Store、日期工具、国际化词典、勋章定义、语录库、更新检查
+└── Views/        # 首页 / 每日记录 / 统计 / 勋章墙 / 设置 / 关于 / 详情弹层 / 周期面板
+scripts/          # 构建与打包脚本
+tools/            # 图标生成器
+docs/screenshots/ # 界面截图
+.github/          # Release 工作流
 ```
