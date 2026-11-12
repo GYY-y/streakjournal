@@ -59,6 +59,23 @@ final class Store: ObservableObject {
         }
     }
 
+    // MARK: - 重置
+
+    /// 重置全部业务数据：清空周期/破戒/每日记录与勋章，设置（目标天数、外观、语言）保留
+    func resetAllData() {
+        do {
+            try db.resetAll()
+            UserDefaults.standard.removeObject(forKey: "achievedBadges")
+            UserDefaults.standard.removeObject(forKey: "lastPage")
+            AppNav.shared.page = .home
+            reload()
+            lastMessage = L("已重置全部数据")
+        } catch {
+            reload()
+            lastMessage = LF("重置失败：%@", error.localizedDescription)
+        }
+    }
+
     // MARK: - 派生数据
 
     var activeCycle: Cycle? { cycles.first { $0.isActive } }

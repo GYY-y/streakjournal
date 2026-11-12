@@ -6,6 +6,9 @@ struct SettingsView: View {
 
     @State private var confirmImport = false
     @State private var pendingImportURL: URL?
+    @State private var confirmReset = false
+    @State private var checkingUpdate = false
+    @State private var updateAvailable: String?
 
     var body: some View {
         ScrollView {
@@ -29,6 +32,31 @@ struct SettingsView: View {
             }
         } message: {
             Text(L("导入会用文件中的数据替换当前的周期、破戒事件和每日记录。"))
+        }
+        .confirmationDialog(
+            L("确认重置全部数据"),
+            isPresented: $confirmReset,
+            titleVisibility: .visible
+        ) {
+            Button(L("重置全部数据"), role: .destructive) { store.resetAllData() }
+        } message: {
+            Text(L("重置会清空所有周期、破戒事件和每日记录，且无法撤销（自动备份仍保留在数据目录中）。"))
+        }
+        .confirmationDialog(
+            LF("发现新版本 %@", updateAvailable ?? ""),
+            isPresented: Binding(
+                get: { updateAvailable != nil },
+                set: { if !$0 { updateAvailable = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L("前往下载页面")) {
+                NSWorkspace.shared.open(Updater.releasePageURL)
+                updateAvailable = nil
+            }
+            Button(L("取消"), role: .cancel) { updateAvailable = nil }
+        } message: {
+            Text(LF("当前版本 %@，可前往下载页面获取新版本。", Updater.currentVersion))
         }
     }
 
@@ -98,6 +126,10 @@ struct SettingsView: View {
                     .frame(width: 150)
                     .labelsHidden()
                 }
+                RowDivider()
+                SettingRow(icon: "arrow.down.circle", color: .green, title: L("检查更新"), subtitle: LF("当前版本：%@", Updater.currentVersion)) {
+                    PillButton(title: checkingUpdate ? L("检查中…") : L("检查"), color: .green) { checkForUpdates() }
+                }
             }
         }
     }
@@ -126,6 +158,27 @@ struct SettingsView: View {
                         NSWorkspace.shared.open(Database.dataDirectory)
                     }
                 }
+                RowDivider()
+                SettingRow(icon: "trash", color: .red, title: L("重置数据"), subtitle: L("清空全部周期、破戒事件和每日记录，恢复到初始状态")) {
+                    PillButton(title: L("重置"), color: .red) { confirmReset = true }
+                }
+            }
+        }
+    }
+
+    /// 联网检查 GitHub 最新 Release；有新版本弹确认框引导前往下载页
+    private func checkForUpdates() {
+        checkingUpdate = true
+        Task {
+            defer { checkingUpdate = false }
+            do {
+                if let latest = try await Updater.fetchLatestVersion() {
+                    updateAvailable = latest
+                } else {
+                    store.lastMessage = LF("已是最新版本（%@）", Updater.currentVersion)
+                }
+            } catch {
+                store.lastMessage = LF("检查更新失败：%@", error.localizedDescription)
             }
         }
     }

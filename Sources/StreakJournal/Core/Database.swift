@@ -106,6 +106,18 @@ final class Database {
         try exec("CREATE INDEX IF NOT EXISTS idx_cycles_start ON cycles(start_date);")
     }
 
+    /// 重置全部业务数据：清空三张表并回收空间（备份文件不受影响）
+    func resetAll() throws {
+        try exec("""
+        BEGIN TRANSACTION;
+        DELETE FROM cycles;
+        DELETE FROM relapses;
+        DELETE FROM daily_records;
+        COMMIT;
+        """)
+        try exec("VACUUM;")
+    }
+
     // MARK: - 基础工具
 
     private func exec(_ sql: String) throws {
