@@ -35,99 +35,17 @@ struct StreakJournalApp: App {
     }
 }
 
-/// 菜单栏面板：仿原生菜单样式（标签左、数值右）
-struct MenuBarPanel: View {
-    @ObservedObject var store: Store
-    @ObservedObject private var l10n = L10n.shared
-    @State private var hoveredAction: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // 状态区（不可点击）
-            menuRow(label: L("已坚持"), value: store.activeCycle != nil ? LF("%@ 天", "\(store.currentStreak)") : L("未开始"))
-
-            HStack(spacing: 0) {
-                Text(L("今日记录"))
-                    .font(.system(size: 13))
-                Spacer()
-                if store.hasRecordToday {
-                    Text(L("已记录"))
-                        .font(.system(size: 13))
-                        .foregroundStyle(.green)
-                } else {
-                    Text(L("今天还没记录"))
-                        .font(.system(size: 13))
-                        .foregroundStyle(.red)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-
-            Divider().padding(.vertical, 4)
-
-            actionButton(L("打开主窗口"), key: "open") { activate(page: nil) }
-            actionButton(L("设置"), key: "settings") { activate(page: .settings) }
-
-            Divider().padding(.vertical, 4)
-
-            actionButton(L("退出"), key: "quit") { NSApp.terminate(nil) }
-        }
-        .padding(.vertical, 6)
-        .frame(width: 250)
-    }
-
-    private func menuRow(label: String, value: String) -> some View {
-        HStack(spacing: 0) {
-            Text(label)
-                .font(.system(size: 13))
-            Spacer()
-            Text(value)
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-    }
-
-    private func actionButton(_ title: String, key: String, action: @escaping () -> Void) -> some View {
-        Button {
-            action()
-        } label: {
-            Text(title)
-                .font(.system(size: 13))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(hoveredAction == key ? Color.accentColor.opacity(0.15) : .clear)
-        )
-        .onHover { hovering in
-            hoveredAction = hovering ? key : (hoveredAction == key ? nil : hoveredAction)
-        }
-    }
-
-    private func activate(page: Page?) {
-        if let page { AppNav.shared.page = page }
-        NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 100 }) {
-            window.makeKeyAndOrderFront(nil)
-        }
-    }
-}
-
-/// 顶部菜单栏图标（NSStatusItem + NSPopover）
+/// 顶部菜单栏图标（NSStatusItem + 原生 NSMenu）
+/// 点击直接弹出系统原生菜单：无动画、系统渲染、悬停高亮，和系统菜单观感完全一致。
 /// 注意：不放在 AppDelegate 的 applicationDidFinishLaunching 里，
 /// 而是从主窗口的 .task 调用 installIfNeeded——swiftc 直编环境下
 /// NSApplicationDelegateAdaptor 的生命周期回调不可靠，View 生命周期是确定会执行的。
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSMenuDelegate {
     static let shared = StatusItemController()
     private var statusItem: NSStatusItem?
-    private let popover = NSPopover()
     private var installed = false
+    /// 信息行数值右对齐的制表位位置
+    private let valueTab: CGFloat = 190
 
     func installIfNeeded() {
         guard !installed else { return }
@@ -152,45 +70,80 @@ final class StatusItemController: NSObject {
         button.image?.isTemplate = false
         button.toolTip = "坚持记录"
 
-        popover.contentViewController = NSHostingController(rootView: MenuBarPanel(store: Store.shared))
-        popover.behavior = .transient
-        popover.contentSize = NSSize(width: 250, height: 170)
+        // 原生菜单：menu 属性直接挂在状态项上，左键/右键点击都弹出系统菜单
+        let menu = NSMenu()
+        menu.delegate = self
+        menu.autoenablesItems = false
+        item.menu = menu
 
-        button.target = self
-        button.action = #selector(togglePopover)
-        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         statusItem = item
-        print("[StatusItem] 状态项已安装")
+        print("[StatusItem] 状态项已安装（原生 NSMenu）")
     }
 
-    @objc private func togglePopover() {
-        if NSApp.currentEvent?.type == .rightMouseUp {
-            let menu = NSMenu()
-            let openItem = NSMenuItem(title: L("打开主窗口"), action: #selector(openMain), keyEquivalent: "")
-            openItem.target = self
-            menu.addItem(openItem)
-            let quitItem = NSMenuItem(title: L("退出"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-            quitItem.target = NSApp
-            menu.addItem(quitItem)
-            if let button = statusItem?.button {
-                statusItem?.menu = menu
-                button.performClick(nil)
-                statusItem?.menu = nil
-            }
-            return
-        }
-        guard let button = statusItem?.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            NSApp.activate(ignoringOtherApps: true)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
-        }
+    // MARK: - 菜单内容：每次打开时重建（语言/数据始终最新）
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let store = Store.shared
+
+        // 状态区（灰色信息行，不可点击）
+        menu.addItem(infoItem(label: L("已坚持"),
+                              value: store.activeCycle != nil ? LF("%@ 天", "\(store.currentStreak)") : L("未开始")))
+        let recorded = store.hasRecordToday
+        menu.addItem(infoItem(label: L("今日记录"),
+                              value: recorded ? L("已记录") : L("今天还没记录"),
+                              valueColor: recorded ? .systemGreen : .systemRed))
+
+        menu.addItem(.separator())
+
+        menu.addItem(actionItem(title: L("打开主窗口"), key: nil, action: #selector(openMain)))
+        menu.addItem(actionItem(title: L("设置"), key: ",", action: #selector(openSettings)))
+
+        menu.addItem(.separator())
+
+        let quit = NSMenuItem(title: L("退出"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quit.target = NSApp
+        menu.addItem(quit)
+    }
+
+    /// 信息行：标签左、数值右（右对齐制表位），不可点击
+    private func infoItem(label: String, value: String, valueColor: NSColor = .secondaryLabelColor) -> NSMenuItem {
+        let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        item.isEnabled = false
+
+        let para = NSMutableParagraphStyle()
+        para.tabStops = [NSTextTab(textAlignment: .right, location: valueTab)]
+        let labelAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.menuFont(ofSize: 13), .foregroundColor: NSColor.labelColor, .paragraphStyle: para
+        ]
+        let valueAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.menuFont(ofSize: 13), .foregroundColor: valueColor, .paragraphStyle: para
+        ]
+        let s = NSMutableAttributedString(string: label, attributes: labelAttrs)
+        s.append(NSAttributedString(string: "\t"))
+        s.append(NSAttributedString(string: value, attributes: valueAttrs))
+        item.attributedTitle = s
+        return item
+    }
+
+    /// 动作项：原生样式，可选快捷键
+    private func actionItem(title: String, key: String?, action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key ?? "")
+        item.target = self
+        item.keyEquivalentModifierMask = .command
+        return item
     }
 
     @objc private func openMain() {
         AppNav.shared.page = .home
+        NSApp.activate(ignoringOtherApps: true)
+        if let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 100 }) {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    @objc private func openSettings() {
+        AppNav.shared.page = .settings
         NSApp.activate(ignoringOtherApps: true)
         if let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 100 }) {
             window.makeKeyAndOrderFront(nil)
