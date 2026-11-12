@@ -68,9 +68,10 @@ struct HistoryView: View {
             .pickerStyle(.segmented)
             .frame(width: 180)
 
-            if mode == .calendar {
-                monthNavigator
-            } else {
+            // 月份导航：日历与时间线共用，保证两个视图看同一份同月数据
+            monthNavigator
+
+            if mode == .timeline {
                 timelineFilters
             }
             Spacer()
@@ -166,7 +167,10 @@ struct HistoryView: View {
                     .foregroundStyle(.green)
                 Text("有记录")
             }
-            LegendDot(color: .red, label: "破戒日（警告）")
+            HStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 3).fill(Color.red.opacity(0.85)).frame(width: 10, height: 10)
+                Text("破戒日（红色警告）")
+            }
             Text("未填写记录的日期不代表当天坚持成功。")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -180,7 +184,8 @@ struct HistoryView: View {
     // MARK: 时间线
 
     private var timelineBody: some View {
-        let items = filteredRecords
+        // 与日历同步：只显示当前选中月份的记录
+        let items = filteredRecords.filter { $0.date.hasPrefix(month) }
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 if items.isEmpty {
@@ -242,21 +247,18 @@ struct CalendarCell: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(dayNumber)
-                .font(.system(size: 15, weight: isToday ? .bold : .regular, design: .rounded))
+                .font(.system(size: 15, weight: isRelapse ? .bold : (isToday ? .bold : .regular), design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(textColor)
             HStack(spacing: 3) {
                 if isCycleStart {
-                    Circle().fill(Color.accentColor).frame(width: 6, height: 6)
-                }
-                if isRelapse {
-                    Circle().fill(Color.red).frame(width: 6, height: 6)
+                    Circle().fill(isRelapse ? Color.white : Color.accentColor).frame(width: 6, height: 6)
                 }
                 if hasRecord {
-                    // 有记录：插画图标（绿色对勾）
+                    // 有记录：插画图标（绿色对勾；破戒日用白色以在红底上可读）
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(isRelapse ? .white : .green)
                 }
             }
             .frame(height: 10)
@@ -276,13 +278,14 @@ struct CalendarCell: View {
 
     private var textColor: Color {
         if isFuture { return .secondary.opacity(0.35) }
-        if isRelapse { return .red }
+        // 破戒日：实心红底 + 白色数字，一眼可辨
+        if isRelapse { return .white }
         return .primary
     }
 
     private var cellBackground: Color {
-        // 破戒日：红色警告
-        if isRelapse { return Color.red.opacity(0.12) }
+        // 破戒日：高饱和红色警告
+        if isRelapse { return Color.red.opacity(0.85) }
         // 周期日：同周期同色，不同周期不同色
         if let cc = cycleColor { return cc.opacity(0.14) }
         return Color.primary.opacity(0.03)
@@ -291,8 +294,8 @@ struct CalendarCell: View {
     private var cellBorder: some View {
         RoundedRectangle(cornerRadius: 8)
             .strokeBorder(
-                isToday ? Color.accentColor : (cycleColor ?? Color.primary.opacity(0.06)).opacity(0.35),
-                lineWidth: isToday ? 1.5 : 1
+                isRelapse ? Color.red.opacity(0.9) : (isToday ? Color.accentColor : (cycleColor ?? Color.primary.opacity(0.06)).opacity(0.35)),
+                lineWidth: isRelapse ? 1.5 : (isToday ? 1.5 : 1)
             )
     }
 }
@@ -401,15 +404,15 @@ struct TimelineEntry: View {
 
     // MARK: 子视图与数据
 
-    /// 破戒日用红色警告底色；否则按周期底色着色
+    /// 破戒日用醒目的红色警告底色；否则按周期底色着色
     private var cardBackground: Color {
-        if relapseNote != nil { return Color.red.opacity(0.07) }
+        if relapseNote != nil { return Color.red.opacity(0.22) }
         if let cc = cycleColor { return cc.opacity(0.08) }
         return Color(nsColor: .controlBackgroundColor)
     }
 
     private var cardBorder: Color {
-        if relapseNote != nil { return Color.red.opacity(0.30) }
+        if relapseNote != nil { return Color.red.opacity(0.65) }
         if let cc = cycleColor { return cc.opacity(0.30) }
         return Color.primary.opacity(0.08)
     }
