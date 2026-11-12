@@ -20,9 +20,9 @@ enum Page: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-/// 页面导航状态：供子视图切换页面
+/// 页面导航状态：供子视图切换页面；记住上次停留的页面
 final class AppNav: ObservableObject {
-    @Published var page: Page = .home
+    @Published var page: Page = Page(rawValue: UserDefaults.standard.string(forKey: "lastPage") ?? "") ?? .home
 }
 
 struct RootView: View {
@@ -38,6 +38,9 @@ struct RootView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle("坚持记录")
+        .onChange(of: nav.page) { _, new in
+            UserDefaults.standard.set(new.rawValue, forKey: "lastPage")
+        }
         .environmentObject(nav)
         .overlay(alignment: .top) {
             if let msg = store.lastMessage {
