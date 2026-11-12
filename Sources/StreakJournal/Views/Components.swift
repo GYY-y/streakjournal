@@ -1,0 +1,276 @@
+import SwiftUI
+
+// MARK: - 选项定义（PRD 4.2.2）
+
+enum RecordOptions {
+    static let moods = ["积极", "平静", "焦虑", "低落", "迷茫", "充实", "其他"]
+    static let emotions = ["开心", "放松", "烦躁", "孤独", "压力大", "焦虑", "平静", "其他"]
+    static let states = ["精力充沛", "注意力集中", "疲惫", "困倦", "状态一般", "其他"]
+}
+
+// MARK: - 参考图风格组件（彩色图标 + 分组行卡片 + 胶囊按钮）
+
+/// 彩色圆角图标徽章
+struct IconBadge: View {
+    let systemImage: String
+    let color: Color
+    var size: CGFloat = 32
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.26)
+            .fill(LinearGradient(
+                colors: [color.opacity(0.85), color],
+                startPoint: .top, endPoint: .bottom
+            ))
+            .frame(width: size, height: size)
+            .overlay(
+                Image(systemName: systemImage)
+                    .font(.system(size: size * 0.48, weight: .medium))
+                    .foregroundStyle(.white)
+            )
+            .shadow(color: color.opacity(0.25), radius: 2, y: 1)
+    }
+}
+
+/// 分组标题（卡片上方的小灰字）
+struct GroupHeader: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+    }
+}
+
+/// 分组圆角卡片：行之间自动插入分隔线
+struct SettingsGroup<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+    }
+}
+
+/// 行内分隔线（左右留出图标缩进）
+struct RowDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.leading, 60)
+    }
+}
+
+/// 设置行：图标 + 标题（+副标题）+ 右侧控件
+struct SettingRow<Trailing: View>: View {
+    let icon: String
+    let color: Color
+    let title: String
+    var subtitle: String? = nil
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 14) {
+            IconBadge(systemImage: icon, color: color)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 12)
+            trailing
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
+/// 彩色胶囊按钮
+struct PillButton: View {
+    let title: String
+    let color: Color
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(color))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 右侧彩色数值文本
+struct ValueText: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(color)
+    }
+}
+
+// MARK: - 通用小组件
+
+struct SectionCard<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+struct Chip: View {
+    let text: String
+    var selected: Bool = false
+    var tint: Color = .accentColor
+    var action: (() -> Void)?
+
+    var body: some View {
+        let body = Text(text)
+            .font(.system(size: 12, weight: selected ? .semibold : .regular))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                Capsule().fill(selected ? tint.opacity(0.18) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                Capsule().strokeBorder(selected ? tint.opacity(0.6) : Color.primary.opacity(0.10), lineWidth: 1)
+            )
+            .foregroundStyle(selected ? tint : Color.primary.opacity(0.75))
+
+        if let action {
+            Button(action: action) { body }
+                .buttonStyle(.plain)
+        } else {
+            body
+        }
+    }
+}
+
+struct StatCard: View {
+    let title: String
+    let value: String
+    var subtitle: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+/// 三态选择（未填写 / 否 / 是）
+struct TriStateField: View {
+    let label: String
+    @Binding var value: Bool?
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13))
+            Spacer()
+            Picker(label, selection: triBinding) {
+                Text("未填写").tag(-1)
+                Text("否").tag(0)
+                Text("是").tag(1)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 180)
+            .labelsHidden()
+        }
+    }
+
+    private var triBinding: Binding<Int> {
+        Binding(
+            get: {
+                switch value {
+                case .some(true): return 1
+                case .some(false): return 0
+                case .none: return -1
+                }
+            },
+            set: {
+                switch $0 {
+                case 1: value = true
+                case 0: value = false
+                default: value = nil
+                }
+            }
+        )
+    }
+}
+
+struct EmptyHint: View {
+    let icon: String
+    let title: String
+    var detail: String? = nil
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 36))
+                .foregroundStyle(.tertiary)
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            if let detail {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+    }
+}

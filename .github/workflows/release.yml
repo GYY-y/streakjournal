@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14   # Apple Silicon runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build app
+        run: bash scripts/build_app.sh
+
+      - name: Make DMG
+        run: bash scripts/make_dmg.sh
+
+      - name: Rename DMG by tag
+        id: name
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VER="${{ github.ref_name }}"
+          else
+            VER="manual-$(date +%Y%m%d%H%M%S)"
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          cp build/StreakJournal-*.dmg "build/StreakJournal-$VER-arm64.dmg"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreakJournal-${{ steps.name.outputs.ver }}-arm64.dmg
+          path: build/StreakJournal-${{ steps.name.outputs.ver }}-arm64.dmg
+
+      - name: Attach to GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/StreakJournal-${{ steps.name.outputs.ver }}-arm64.dmg
+          generate_release_notes: true
