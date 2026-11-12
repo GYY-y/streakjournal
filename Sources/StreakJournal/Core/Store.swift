@@ -30,6 +30,20 @@ final class Store: ObservableObject {
         }
     }
 
+    /// 每日记录中「是否接触」这一项的动态名称（默认"色情"）。
+    /// 应用现已定位为通用坚持记录工具，这里让用户改为自己实际在坚持避免的事物，如酒精、熬夜、暴食。
+    var behaviorLabel: String {
+        get {
+            let v = UserDefaults.standard.string(forKey: "behaviorLabel")?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (v?.isEmpty == false) ? v! : "色情"
+        }
+        set {
+            let v = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            UserDefaults.standard.set(v.isEmpty ? "色情" : v, forKey: "behaviorLabel")
+            objectWillChange.send()
+        }
+    }
+
     private let db = Database()
     private var bootstrapped = false
     private var backupTimer: Timer?

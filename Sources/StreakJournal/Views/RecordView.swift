@@ -30,7 +30,7 @@ struct RecordView: View {
                     FlowChips(options: RecordOptions.states, selected: draft.state) { draft.state = ($0 == draft.state) ? nil : $0 }
                 }
                 SectionCard(title: L("今日行为情况（可不填，各字段独立记录）")) {
-                    TriStateChips(label: L("是否接触色情内容"), value: $draft.contactedPorn)
+                    TriStateChips(label: LF("是否接触%@", Store.shared.behaviorLabel), value: $draft.contactedPorn)
                     Divider().padding(.vertical, 6)
                     TriStateChips(label: L("是否发生目标行为"), value: $draft.targetBehavior)
                     Divider().padding(.vertical, 6)

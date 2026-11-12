@@ -127,6 +127,15 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
                 RowDivider()
+                SettingRow(icon: "tag", color: .orange, title: L("行为标签"), subtitle: L("每日记录中「是否接触」这一项的名称，可改成你实际在坚持避免的事，如酒精、熬夜、暴食")) {
+                    TextField("", text: Binding(
+                        get: { store.behaviorLabel },
+                        set: { store.behaviorLabel = $0 }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 150)
+                }
+                RowDivider()
                 SettingRow(icon: "arrow.down.circle", color: .green, title: L("检查更新"), subtitle: LF("当前版本：%@", Updater.currentVersion)) {
                     PillButton(title: checkingUpdate ? L("检查中…") : L("检查"), color: .green) { checkForUpdates() }
                 }

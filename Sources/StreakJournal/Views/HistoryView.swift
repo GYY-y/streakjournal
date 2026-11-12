@@ -487,7 +487,7 @@ struct TimelineEntry: View {
     private var behaviorLines: [String] {
         guard let record else { return [] }
         var lines: [String] = []
-        if let v = record.contactedPorn { lines.append(LF("接触色情内容：%@", L(v ? "是" : "否"))) }
+        if let v = record.contactedPorn { lines.append(LF("接触%@：%@", Store.shared.behaviorLabel, L(v ? "是" : "否"))) }
         if let v = record.targetBehavior { lines.append(LF("发生目标行为：%@", L(v ? "是" : "否"))) }
         if let v = record.strongUrge { lines.append(LF("出现明显冲动：%@", L(v ? "是" : "否"))) }
         return lines
