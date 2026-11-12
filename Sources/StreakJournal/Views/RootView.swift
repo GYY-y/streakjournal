@@ -37,11 +37,12 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .navigationTitle("坚持记录")
         .environmentObject(nav)
         .overlay(alignment: .top) {
             if let msg = store.lastMessage {
                 ToastBanner(text: msg)
-                    .padding(.top, 46)
+                    .padding(.top, 20)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .task {
                         try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -53,15 +54,10 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.25), value: store.lastMessage)
     }
 
-    // MARK: 顶部标签栏：固定标题「坚持记录」+ 居中胶囊分段
+    // MARK: 顶部标签栏：居中胶囊分段（标题固定显示在窗口最顶部中间）
 
     private var topBar: some View {
-        VStack(spacing: 8) {
-            // 每次点击标签都会展示的标题，固定为「坚持记录」
-            Text("坚持记录")
-                .font(.system(size: 17, weight: .semibold))
-                .id(nav.page)
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        VStack(spacing: 0) {
             Picker("", selection: $nav.page) {
                 ForEach(Page.allCases) { page in
                     Text(page.rawValue).tag(page)
@@ -73,7 +69,6 @@ struct RootView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .animation(.easeOut(duration: 0.25), value: nav.page)
     }
 
     @ViewBuilder

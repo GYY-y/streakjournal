@@ -32,7 +32,6 @@ struct HistoryView: View {
                 timelineBody
             }
         }
-        .navigationTitle("统计")
         .sheet(item: $selectedDate) { selection in
             RecordDetailSheet(date: selection.day)
         }
@@ -168,18 +167,9 @@ struct HistoryView: View {
                             set: { if $0 { expandedDays.insert(r.date) } else { expandedDays.remove(r.date) } }
                         )
                     )
-                    .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { toggleExpand(r.date) } }
                 }
             }
             .padding(20)
-        }
-    }
-
-    private func toggleExpand(_ day: String) {
-        if expandedDays.contains(day) {
-            expandedDays.remove(day)
-        } else {
-            expandedDays.insert(day)
         }
     }
 
@@ -280,10 +270,11 @@ struct TimelineEntry: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 摘要行（始终显示）
+            // 摘要行（始终显示，点击切换展开/折叠）
             HStack(spacing: 8) {
                 Text(DateUtil.display(record.date, style: store.dateStyle))
                     .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                    .textSelection(.enabled)
                 Text(weekdayText)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -300,16 +291,25 @@ struct TimelineEntry: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+            }
 
-            // 一行摘要（折叠时）
+            // 一行摘要（折叠时，点击同样可展开）
             if !isExpanded {
                 Text(summaryLine)
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+                    }
             }
 
-            // 展开详情
+            // 展开详情（文本可选中复制）
             if isExpanded {
                 Divider()
                 if let p = record.perception, !p.isEmpty {
@@ -326,11 +326,13 @@ struct TimelineEntry: View {
                         ForEach(behaviorLines, id: \.self) { line in
                             Text("· \(line)")
                                 .font(.system(size: 13))
+                                .textSelection(.enabled)
                         }
                         if let note = record.behaviorNote {
                             Text("备注：\(note)")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
                         }
                     }
                 }
@@ -338,10 +340,12 @@ struct TimelineEntry: View {
                     Text("破戒备注：\(relapseNote!)")
                         .font(.system(size: 13))
                         .foregroundStyle(.orange)
+                        .textSelection(.enabled)
                 }
                 Text("最后更新：\(DateUtil.displayDateTime(record.updatedAt))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
             }
         }
         .padding(14)
@@ -351,7 +355,6 @@ struct TimelineEntry: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(isExpanded ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.08), lineWidth: 1)
         )
-        .contentShape(Rectangle())
     }
 
     // MARK: 子视图与数据
@@ -364,6 +367,7 @@ struct TimelineEntry: View {
             Text(text)
                 .font(.system(size: 13))
                 .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
         }
     }
 

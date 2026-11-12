@@ -2,7 +2,6 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: Store
-    @EnvironmentObject private var nav: AppNav
     @State private var encouragement = ""
     @State private var showNewCycleSheet = false
     @State private var showBackdatedSheet = false
@@ -12,7 +11,7 @@ struct HomeView: View {
             VStack(spacing: 20) {
                 streakCard
                 encouragementCard
-                todayCard
+                actionPills
                 if let cycle = store.activeCycle {
                     SectionCard(title: "当前周期") {
                         LabeledRow("开始日期", DateUtil.display(cycle.startDate, style: store.dateStyle))
@@ -28,7 +27,6 @@ struct HomeView: View {
                         }
                     }
                 }
-                recentRecords
             }
             .padding(24)
         }
@@ -93,73 +91,49 @@ struct HomeView: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.06)))
     }
 
-    private var todayCard: some View {
-        SectionCard(title: "今日状态") {
-            HStack {
-                if store.activeCycle != nil {
-                    Label(
-                        store.hasRecordToday ? "今天已经记录" : "今天还没有记录",
-                        systemImage: store.hasRecordToday ? "checkmark.circle.fill" : "circle.dashed"
-                    )
-                    .font(.system(size: 13))
-                    .foregroundStyle(store.hasRecordToday ? .green : .secondary)
-                }
-                Spacer()
-            }
-
+    /// 椭圆形操作按钮行：「坚持中」默认选中，「开启新的周期」「补录破戒」可点击
+    private var actionPills: some View {
+        HStack(spacing: 12) {
             if store.activeCycle != nil {
-                HStack(spacing: 12) {
-                    Button {
-                        showNewCycleSheet = true
-                    } label: {
-                        Label("开启新的周期", systemImage: "arrow.counterclockwise")
-                    }
-                    Button {
-                        showBackdatedSheet = true
-                    } label: {
-                        Label("补录破戒", systemImage: "clock.badge.exclamationmark")
-                    }
-                    Spacer()
-                    Button {
-                        nav.page = .record
-                    } label: {
-                        Label(store.hasRecordToday ? "编辑今日记录" : "填写今日记录", systemImage: "square.and.pencil")
-                    }
-                    .buttonStyle(.borderedProminent)
+                // 状态胶囊：默认选中
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12))
+                    Text("坚持中")
+                        .font(.system(size: 13, weight: .semibold))
                 }
-                Text("「继续坚持」无需任何操作——只要不开启新周期，坚持天数会自然延续。")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(Color.green.opacity(0.15)))
+                .overlay(Capsule().strokeBorder(Color.green.opacity(0.55), lineWidth: 1))
+                .foregroundStyle(.green)
+
+                pillButton(title: "开启新的周期", icon: "arrow.counterclockwise", tint: .accentColor) {
+                    showNewCycleSheet = true
+                }
+                pillButton(title: "补录破戒", icon: "clock.badge.exclamationmark", tint: .orange) {
+                    showBackdatedSheet = true
+                }
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
-    private var recentRecords: some View {
-        SectionCard(title: "最近的记录") {
-            if store.records.isEmpty {
-                Text("还没有任何记录。每一天的心情、状态和想法，都值得留下来。")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            } else {
-                ForEach(store.records.prefix(5)) { r in
-                    HStack(spacing: 12) {
-                        IconBadge(systemImage: "square.and.pencil", color: .blue, size: 28)
-                        Text(DateUtil.display(r.date, style: store.dateStyle))
-                            .font(.system(size: 13).monospacedDigit())
-                            .frame(width: 110, alignment: .leading)
-                        if let mood = r.mood {
-                            Chip(text: mood, selected: true)
-                        }
-                        Text(r.freeText ?? r.perception ?? r.state ?? "（仅结构化记录）")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Spacer()
-                    }
-                    .padding(.vertical, 2)
-                }
+    private func pillButton(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
             }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(tint.opacity(0.10)))
+            .overlay(Capsule().strokeBorder(tint.opacity(0.45), lineWidth: 1))
+            .foregroundStyle(tint)
         }
+        .buttonStyle(.plain)
     }
 }
 

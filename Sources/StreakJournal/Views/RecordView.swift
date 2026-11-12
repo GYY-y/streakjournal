@@ -69,7 +69,6 @@ struct RecordView: View {
             }
             .padding(24)
         }
-        .navigationTitle("每日记录")
         .onAppear(perform: loadDraft)
         .onChange(of: currentDate) { _, _ in loadDraft() }
         .onChange(of: draft) { _, _ in scheduleSave() }
