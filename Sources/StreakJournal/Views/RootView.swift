@@ -4,6 +4,7 @@ enum Page: String, CaseIterable, Identifiable {
     case home = "首页"
     case record = "每日记录"
     case history = "统计"
+    case badges = "勋章"
     case settings = "设置"
     case about = "关于"
 
@@ -12,6 +13,7 @@ enum Page: String, CaseIterable, Identifiable {
         case .home: return "figure.mind.and.body"
         case .record: return "square.and.pencil"
         case .history: return "chart.bar.xaxis"
+        case .badges: return "rosette"
         case .settings: return "gearshape"
         case .about: return "info.circle"
         }
@@ -20,14 +22,16 @@ enum Page: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-/// 页面导航状态：供子视图切换页面；记住上次停留的页面
+/// 页面导航状态：供子视图切换页面；记住上次停留的页面；全局单例（菜单栏面板也要切换页面）
 final class AppNav: ObservableObject {
+    static let shared = AppNav()
     @Published var page: Page = Page(rawValue: UserDefaults.standard.string(forKey: "lastPage") ?? "") ?? .home
+    private init() {}
 }
 
 struct RootView: View {
     @EnvironmentObject private var store: Store
-    @StateObject private var nav = AppNav()
+    @ObservedObject private var nav = AppNav.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,7 +72,7 @@ struct RootView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 480)
+            .frame(width: 560)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -80,6 +84,7 @@ struct RootView: View {
         case .home: HomeView()
         case .record: RecordView()
         case .history: HistoryView()
+        case .badges: BadgesView()
         case .settings: SettingsView()
         case .about: AboutView()
         }
