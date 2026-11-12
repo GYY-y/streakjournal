@@ -1,5 +1,7 @@
 import SwiftUI
 import AppKit
+import UserNotifications
+import Combine
 
 @main
 struct StreakJournalApp: App {
@@ -17,6 +19,7 @@ struct StreakJournalApp: App {
                 .task {
                     Store.shared.bootstrap()
                     StatusItemController.shared.installIfNeeded()
+                    NotificationManager.shared.setup()
                 }
         }
     }
@@ -32,17 +35,11 @@ struct StreakJournalApp: App {
     }
 }
 
-/// 菜单栏刷新通知：每次点开状态项图标时，面板重新抽一句语录
-extension Notification.Name {
-    static let menuBarPanelWillShow = Notification.Name("menuBarPanelWillShow")
-}
-
-/// 菜单栏面板：仿原生菜单样式（标签左、数值右）+ 一句哲学语录
+/// 菜单栏面板：仿原生菜单样式（标签左、数值右）
 struct MenuBarPanel: View {
     @ObservedObject var store: Store
     @ObservedObject private var l10n = L10n.shared
     @State private var hoveredAction: String?
-    @State private var quote = Quotes.random()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -66,21 +63,6 @@ struct MenuBarPanel: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
 
-            // 哲学语录：每次点开菜单栏换一句
-            VStack(alignment: .leading, spacing: 2) {
-                Text("「\(quote.text(l10n.resolved))」")
-                    .font(.system(size: 11, design: .serif))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("—— \(quote.author(l10n.resolved))")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-
             Divider().padding(.vertical, 4)
 
             actionButton(L("打开主窗口"), key: "open") { activate(page: nil) }
@@ -92,10 +74,6 @@ struct MenuBarPanel: View {
         }
         .padding(.vertical, 6)
         .frame(width: 250)
-        .onAppear { quote = Quotes.random() }
-        .onReceive(NotificationCenter.default.publisher(for: .menuBarPanelWillShow)) { _ in
-            quote = Quotes.random()
-        }
     }
 
     private func menuRow(label: String, value: String) -> some View {
@@ -176,7 +154,7 @@ final class StatusItemController: NSObject {
 
         popover.contentViewController = NSHostingController(rootView: MenuBarPanel(store: Store.shared))
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 250, height: 280)
+        popover.contentSize = NSSize(width: 250, height: 170)
 
         button.target = self
         button.action = #selector(togglePopover)
@@ -206,7 +184,6 @@ final class StatusItemController: NSObject {
             popover.performClose(nil)
         } else {
             NSApp.activate(ignoringOtherApps: true)
-            NotificationCenter.default.post(name: .menuBarPanelWillShow, object: nil)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
@@ -230,5 +207,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
         default: NSApp.appearance = nil
         }
+    }
+}
+
+// MARK: - 每日语录通知：每天固定时间用系统通知推送一句哲学语录（本地通知，无需网络）
+
+final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationManager()
+
+    private let center = UNUserNotificationCenter.current()
+    private let dailyID = "dailyPhilosophyQuote"
+    /// 每天推送时刻（本地时间）：上午 9:00
+    private let hour = 9
+    private let minute = 0
+    private var langCancellable: AnyCancellable?
+
+    private override init() { super.init() }
+
+    func setup() {
+        center.delegate = self
+        // 语言切换后按新语言重新安排通知内容
+        langCancellable = L10n.shared.$lang
+            .dropFirst()
+            .sink { [weak self] _ in self?.scheduleDailyQuote() }
+        center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
+            guard granted else {
+                print("[Notify] 用户未授权通知")
+                return
+            }
+            DispatchQueue.main.async { self?.scheduleDailyQuote() }
+        }
+    }
+
+    /// （重新）安排每日通知：每次启动换一句新语录，系统重复触发
+    func scheduleDailyQuote() {
+        let q = Quotes.random()
+        let r = L10n.shared.resolved
+        let content = UNMutableNotificationContent()
+        content.title = L("坚持记录")
+        content.body = "「\(q.text(r))」 ——\(q.author(r))"
+        content.sound = .default
+
+        var comps = DateComponents()
+        comps.hour = hour
+        comps.minute = minute
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+
+        center.removePendingNotificationRequests(withIdentifiers: [dailyID])
+        center.add(UNNotificationRequest(identifier: dailyID, content: content, trigger: trigger)) { error in
+            if let error { print("[Notify] 安排失败:", error.localizedDescription) }
+            else { print("[Notify] 每日语录通知已安排（每天 \(self.hour):\(String(format: "%02d", self.minute))）") }
+        }
+    }
+
+    /// 应用在前台时也显示横幅（默认前台不展示）
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
 }

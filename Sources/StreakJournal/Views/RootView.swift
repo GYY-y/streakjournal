@@ -64,6 +64,10 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.25), value: store.lastMessage)
+        // 语言切换时强制整棵页面树重建：
+        // 子页面（HomeView 等）没有可变参数，SwiftUI diff 会跳过它们的重绘，
+        // 仅靠观察 L10n 无法让深层文案更新——用 id 变化重建是唯一可靠手段。
+        .id(l10n.lang)
     }
 
     // MARK: 顶部标签栏：居中胶囊分段（标题固定显示在窗口最顶部中间）
