@@ -4,7 +4,6 @@ import AppKit
 struct SettingsView: View {
     @EnvironmentObject private var store: Store
 
-    @State private var backupToRestore: String?
     @State private var confirmImport = false
     @State private var pendingImportURL: URL?
 
@@ -15,18 +14,6 @@ struct SettingsView: View {
                 dataGroup
             }
             .padding(24)
-        }
-        .confirmationDialog(
-            "恢复备份将覆盖当前全部数据",
-            isPresented: Binding(get: { backupToRestore != nil }, set: { if !$0 { backupToRestore = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("恢复备份", role: .destructive) {
-                if let name = backupToRestore { store.restoreBackup(fileName: name) }
-                backupToRestore = nil
-            }
-        } message: {
-            Text("恢复「\(backupToRestore ?? "")」会用备份内容覆盖当前的周期、破戒事件和每日记录。")
         }
         .confirmationDialog(
             "导入数据将覆盖当前全部数据",
@@ -104,8 +91,7 @@ struct SettingsView: View {
     // MARK: - 数据
 
     private var dataGroup: some View {
-        let backups = Store.backupFiles()
-        return VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             GroupHeader(text: "数据与维护")
             SettingsGroup {
                 SettingRow(icon: "square.and.arrow.up", color: .blue, title: "导出数据", subtitle: "导出全部周期、破戒事件和每日记录（JSON 文件）") {
@@ -116,31 +102,8 @@ struct SettingsView: View {
                     PillButton(title: "导入", color: .teal) { pickImportFile() }
                 }
                 RowDivider()
-                SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: backups.isEmpty ? "自动备份" : "备份记录", subtitle: backups.isEmpty
-                    ? "系统每 12 小时自动备份一次（保留最近 10 份），暂无备份文件"
-                    : "共 \(backups.count) 份，系统每 12 小时自动备份一次（保留最近 10 份），点击可恢复") {
-                    Menu {
-                            ForEach(backups, id: \.lastPathComponent) { url in
-                                Button {
-                                    backupToRestore = url.lastPathComponent
-                                } label: {
-                                    Text(backupLabel(url))
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Text("选择恢复")
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 9, weight: .semibold))
-                            }
-                            .font(.system(size: 12, weight: .medium))
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(Color.orange))
-                            .foregroundStyle(.white)
-                        }
-                        .menuStyle(.borderlessButton)
-                        .fixedSize()
+                SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "自动备份", subtitle: "系统每 12 小时自动备份一次（保留最近 10 份），备份文件存放在下方数据目录的 backups 文件夹中") {
+                    EmptyView()
                 }
                 RowDivider()
 
@@ -154,13 +117,6 @@ struct SettingsView: View {
     }
 
     // MARK: - 面板
-
-    private func backupLabel(_ url: URL) -> String {
-        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
-        let size = attrs?[.size] as? Int
-        let sizeText = size.map { " · \(max(1, $0 / 1024)) KB" } ?? ""
-        return url.lastPathComponent + sizeText
-    }
 
     private func exportData() {
         let panel = NSSavePanel()

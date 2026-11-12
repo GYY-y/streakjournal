@@ -400,19 +400,4 @@ final class Database {
         }
         try FileManager.default.copyItem(at: Database.dbFileURL, to: url)
     }
-
-    func restore(from url: URL) throws {
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            throw DatabaseError.sqlite("备份文件不存在")
-        }
-        close()
-        let fm = FileManager.default
-        for suffix in ["-wal", "-shm"] {
-            let p = Database.dbFileURL.path + suffix
-            if fm.fileExists(atPath: p) { try? fm.removeItem(atPath: p) }
-        }
-        try fm.removeItem(at: Database.dbFileURL)
-        try fm.copyItem(at: url, to: Database.dbFileURL)
-        try open()
-    }
 }

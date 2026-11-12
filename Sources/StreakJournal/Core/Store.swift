@@ -292,19 +292,6 @@ final class Store: ObservableObject {
         }
     }
 
-    func restoreBackup(fileName: String) {
-        let url = Database.backupsDirectory.appendingPathComponent(fileName)
-        do {
-            try db.restore(from: url)
-            reload()
-            lastMessage = "已从备份恢复：\(fileName)"
-        } catch {
-            try? db.open()
-            reload()
-            lastMessage = "恢复失败：\(error.localizedDescription)"
-        }
-    }
-
     // MARK: - 导出 / 导入
 
     func exportData(to url: URL) throws {
