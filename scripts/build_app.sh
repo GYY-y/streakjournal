@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 APP_NAME="StreakJournal"
 APP_DISPLAY_NAME="坚持记录"
 BUNDLE_ID="com.edy.streakjournal"
-VERSION="1.9.0"
+VERSION="1.9.1"
 ROOT="$(pwd)"
 BUILD="$ROOT/build"
 RESOURCE_SHADOW="$ROOT/.build/toolchain/usr/lib/swift"
@@ -34,37 +34,25 @@ else
         -o "$BIN"
 fi
 
-echo "==> 生成图标（来自 SVG）"
+echo "==> 生成图标（来自 SVG，NSImage 原生渲染）"
 ICON_PNG="$ROOT/.build/app/AppIcon_1024.png"
+MENU_ICON="$ROOT/.build/app/MenuBarIcon.png"
 SVG_SRC="$ROOT/Resources/AppIconSource.svg"
-RAW_ICON="$ROOT/.build/app/icon_raw.png"
-rm -f "$RAW_ICON"
-if [ ! -f "$ICON_PNG" ]; then
-    qlmanage -t -s 1024 -o "$ROOT/.build/app" "$SVG_SRC" >/dev/null 2>&1 || true
-    if [ -f "$ROOT/.build/app/AppIconSource.svg.png" ]; then
-        mv "$ROOT/.build/app/AppIconSource.svg.png" "$RAW_ICON"
-    fi
-    if [ -f "$RAW_ICON" ]; then
-        if swift build -c release --arch arm64 >/dev/null 2>&1; then
-            swift tools/composite_icon.swift "$RAW_ICON" "$ICON_PNG"
-        else
-            swift -resource-dir "$RESOURCE_SHADOW" tools/composite_icon.swift "$RAW_ICON" "$ICON_PNG"
-        fi
+if [ ! -f "$ICON_PNG" ] || [ ! -f "$MENU_ICON" ]; then
+    if swift build -c release --arch arm64 >/dev/null 2>&1; then
+        swift tools/composite_icon.swift "$SVG_SRC" "$ICON_PNG" "$MENU_ICON" || true
     else
-        echo "    qlmanage 渲染 SVG 失败，回退到内置对勾图标"
+        swift -resource-dir "$RESOURCE_SHADOW" tools/composite_icon.swift "$SVG_SRC" "$ICON_PNG" "$MENU_ICON" || true
+    fi
+    # SVG 解析失败时回退到内置对勾图标
+    if [ ! -f "$ICON_PNG" ]; then
+        echo "    SVG 渲染失败，回退到内置对勾图标"
         if swift build -c release --arch arm64 >/dev/null 2>&1; then
             swift tools/make_icon.swift "$ICON_PNG"
         else
             swift -resource-dir "$RESOURCE_SHADOW" tools/make_icon.swift "$ICON_PNG"
         fi
     fi
-fi
-
-# 菜单栏小图标（36x36 彩色）
-qlmanage -t -s 72 -o "$ROOT/.build/app" "$SVG_SRC" >/dev/null 2>&1 || true
-if [ -f "$ROOT/.build/app/AppIconSource.svg.png" ]; then
-    sips -z 36 36 "$ROOT/.build/app/AppIconSource.svg.png" --out "$ROOT/.build/app/MenuBarIcon.png" >/dev/null
-    rm -f "$ROOT/.build/app/AppIconSource.svg.png"
 fi
 ICONSET="$ROOT/.build/app/AppIcon.iconset"
 rm -rf "$ICONSET"
@@ -83,8 +71,8 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$ROOT/.build/app/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 cp "$ICNS" "$APP/Contents/Resources/AppIcon.icns"
-if [ -f "$ROOT/.build/app/MenuBarIcon.png" ]; then
-    cp "$ROOT/.build/app/MenuBarIcon.png" "$APP/Contents/Resources/MenuBarIcon.png"
+if [ -f "$MENU_ICON" ]; then
+    cp "$MENU_ICON" "$APP/Contents/Resources/MenuBarIcon.png"
 fi
 
 cat > "$APP/Contents/Info.plist" << PLIST
