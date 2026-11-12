@@ -6,6 +6,7 @@ enum Page: String, CaseIterable, Identifiable {
     case history = "历史记录"
     case stats = "统计"
     case settings = "设置"
+    case about = "关于"
 
     var icon: String {
         switch self {
@@ -14,6 +15,7 @@ enum Page: String, CaseIterable, Identifiable {
         case .history: return "clock.arrow.circlepath"
         case .stats: return "chart.bar.xaxis"
         case .settings: return "gearshape"
+        case .about: return "info.circle"
         }
     }
 
@@ -68,7 +70,7 @@ struct RootView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 480)
+            .frame(width: 560)
             Spacer()
             // 等宽占位，让标签真正居中
             Text("坚持记录")
@@ -87,6 +89,7 @@ struct RootView: View {
         case .history: HistoryView()
         case .stats: StatsView()
         case .settings: SettingsView()
+        case .about: AboutView()
         }
     }
 }

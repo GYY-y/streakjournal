@@ -6,7 +6,6 @@ struct RecordView: View {
     @State private var currentDate = DateUtil.todayKey()
     @State private var draft = DailyRecord(date: "", mood: nil, emotions: [], state: nil, perception: nil, freeText: nil, contactedPorn: nil, targetBehavior: nil, strongUrge: nil, behaviorNote: nil, updatedAt: "")
     @State private var saveTask: Task<Void, Never>?
-    @State private var showDeleteConfirm = false
 
     var body: some View {
         ScrollView {
@@ -30,6 +29,21 @@ struct RecordView: View {
                 SectionCard(title: "今日状态") {
                     FlowChips(options: RecordOptions.states, selected: draft.state) { draft.state = ($0 == draft.state) ? nil : $0 }
                 }
+                SectionCard(title: "今日行为情况（可不填，各字段独立记录）") {
+                    TriStateChips(label: "是否接触色情内容", value: $draft.contactedPorn)
+                    Divider().padding(.vertical, 6)
+                    TriStateChips(label: "是否发生目标行为", value: $draft.targetBehavior)
+                    Divider().padding(.vertical, 6)
+                    TriStateChips(label: "是否出现明显冲动", value: $draft.strongUrge)
+                    Divider().padding(.vertical, 6)
+                    Text("备注")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.primary.opacity(0.8))
+                    NoteEditor(text: Binding(
+                        get: { draft.behaviorNote ?? "" },
+                        set: { draft.behaviorNote = $0.isEmpty ? nil : $0 }
+                    ), placeholder: "与行为相关的备注（可选）……", minHeight: 60)
+                }
                 SectionCard(title: "今日变化与感知") {
                     TextEditor(text: Binding(
                         get: { draft.perception ?? "" },
@@ -50,16 +64,6 @@ struct RecordView: View {
                     .font(.system(size: 13))
                     .placeholder("今天发生了什么、想了什么、遇到什么问题……不受模板限制，写你想留下的。", when: (draft.freeText ?? "").isEmpty)
                 }
-                SectionCard(title: "今日行为情况（可不填，各字段独立记录）") {
-                    TriStateField(label: "是否接触色情内容", value: $draft.contactedPorn)
-                    TriStateField(label: "是否发生目标行为", value: $draft.targetBehavior)
-                    TriStateField(label: "是否出现明显冲动", value: $draft.strongUrge)
-                    TextField("备注（可选）", text: Binding(
-                        get: { draft.behaviorNote ?? "" },
-                        set: { draft.behaviorNote = $0.isEmpty ? nil : $0 }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                }
 
                 footerBar
             }
@@ -69,18 +73,6 @@ struct RecordView: View {
         .onAppear(perform: loadDraft)
         .onChange(of: currentDate) { _, _ in loadDraft() }
         .onChange(of: draft) { _, _ in scheduleSave() }
-        .confirmationDialog(
-            "确定删除 \(DateUtil.display(currentDate, style: store.dateStyle)) 的记录吗？",
-            isPresented: $showDeleteConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("删除记录", role: .destructive) {
-                store.deleteRecord(date: currentDate)
-                loadDraft()
-            }
-        } message: {
-            Text("删除每日记录不会影响坚持周期的数据。")
-        }
     }
 
     // MARK: 子视图
@@ -103,6 +95,7 @@ struct RecordView: View {
                 in: ...Date(),
                 displayedComponents: .date
             )
+            .datePickerStyle(.field)
             .labelsHidden()
 
             Spacer()
@@ -134,12 +127,8 @@ struct RecordView: View {
 
     private var footerBar: some View {
         HStack {
-            Button("删除这条记录", role: .destructive) {
-                showDeleteConfirm = true
-            }
-            .disabled(draftIsNew)
-            Spacer()
             if let saved = store.lastSavedAt, !draftIsNew {
+                Spacer()
                 Text("已保存 \(saved.formatted(date: .omitted, time: .standard))")
                     .font(.caption)
                     .foregroundStyle(.secondary)

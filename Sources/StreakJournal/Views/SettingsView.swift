@@ -19,7 +19,6 @@ struct SettingsView: View {
                 basicGroup
                 cycleGroup
                 dataGroup
-                aboutGroup
             }
             .padding(24)
         }
@@ -81,18 +80,27 @@ struct SettingsView: View {
 
     // MARK: - 基础
 
+    private let goalOptions = [7, 14, 21, 30, 60, 90, 180, 365, 730]
+
     private var basicGroup: some View {
         VStack(alignment: .leading, spacing: 8) {
             GroupHeader(text: "应用")
             SettingsGroup {
                 SettingRow(icon: "target", color: .blue, title: "坚持目标", subtitle: "只用于首页进度展示，不做强制判断") {
-                    Stepper(value: Binding(
+                    Picker("", selection: Binding(
                         get: { store.goalDays },
-                        set: { store.goalDays = max(1, $0) }
-                    ), in: 1...3650) {
-                        ValueText(text: "\(store.goalDays) 天", color: .blue)
+                        set: { store.goalDays = $0 }
+                    )) {
+                        ForEach(goalOptions, id: \.self) { days in
+                            Text("\(days) 天").tag(days)
+                        }
+                        if !goalOptions.contains(store.goalDays) {
+                            Text("\(store.goalDays) 天（自定义）").tag(store.goalDays)
+                        }
                     }
-                    .fixedSize()
+                    .pickerStyle(.menu)
+                    .frame(width: 130)
+                    .labelsHidden()
                 }
                 RowDivider()
                 SettingRow(icon: "circle.lefthalf.filled", color: .indigo, title: "外观") {
@@ -207,14 +215,35 @@ struct SettingsView: View {
                     PillButton(title: "导入", color: .teal) { pickImportFile() }
                 }
                 RowDivider()
-                SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "手动备份", subtitle: "自动备份超过 24 小时进行一次，保留最近 10 份") {
-                    PillButton(title: "备份", color: .green) { store.manualBackup() }
-                }
-                RowDivider()
-
-                ForEach(Array(backups.prefix(5)), id: \.lastPathComponent) { url in
-                    SettingRow(icon: "doc.text.magnifyingglass", color: .gray, title: url.lastPathComponent, subtitle: nil) {
-                        PillButton(title: "恢复", color: .orange) { backupToRestore = url.lastPathComponent }
+                if backups.isEmpty {
+                    SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "手动备份", subtitle: "还没有备份文件，点击右侧创建第一份") {
+                        PillButton(title: "备份", color: .green) { store.manualBackup() }
+                    }
+                    RowDivider()
+                } else {
+                    SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "备份记录", subtitle: "共 \(backups.count) 份（自动备份超过 24 小时一次，保留最近 10 份），点击备份可恢复") {
+                        Menu {
+                            ForEach(backups, id: \.lastPathComponent) { url in
+                                Button {
+                                    backupToRestore = url.lastPathComponent
+                                } label: {
+                                    Text(backupLabel(url))
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Text("选择恢复")
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9, weight: .semibold))
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(Color.orange))
+                            .foregroundStyle(.white)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
                     }
                     RowDivider()
                 }
@@ -228,27 +257,14 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - 关于
-
-    private var aboutGroup: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GroupHeader(text: "关于")
-            SettingsGroup {
-                SettingRow(icon: "figure.mind.and.body", color: .blue, title: "坚持记录（StreakJournal）", subtitle: "个人每日记录与坚持周期管理工具") {
-                    ValueText(
-                        text: "v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")",
-                        color: .secondary
-                    )
-                }
-                RowDivider()
-                SettingRow(icon: "info.circle", color: .gray, title: "使用说明", subtitle: "每日记录自动保存；开启新周期不删除历史；破戒日独立保存、不计入坚持天数；删除每日记录不影响周期数据。") {
-                    EmptyView()
-                }
-            }
-        }
-    }
-
     // MARK: - 面板
+
+    private func backupLabel(_ url: URL) -> String {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let size = attrs?[.size] as? Int
+        let sizeText = size.map { " · \(max(1, $0 / 1024)) KB" } ?? ""
+        return url.lastPathComponent + sizeText
+    }
 
     private func exportData() {
         let panel = NSSavePanel()
@@ -314,11 +330,13 @@ struct CycleEditSheet: View {
                 )
             }
 
-            TextField("备注（可选）", text: Binding(
+            Text("备注（可选）")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+            NoteEditor(text: Binding(
                 get: { cycle.note ?? "" },
                 set: { cycle.note = $0.isEmpty ? nil : $0 }
-            ))
-            .textFieldStyle(.roundedBorder)
+            ), placeholder: "这段周期有什么想记下的？例如：心态变化、触发原因、目标调整……")
 
             HStack {
                 Spacer()

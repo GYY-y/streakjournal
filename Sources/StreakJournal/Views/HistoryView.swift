@@ -154,16 +154,22 @@ struct HistoryView: View {
     private var timelineBody: some View {
         let items = filteredRecords
         return ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 if items.isEmpty {
                     EmptyHint(icon: "tray", title: "没有符合条件的记录", detail: "调整筛选条件，或先去填写每日记录。")
                 }
-                ForEach(items) { r in
-                    TimelineRow(record: r, relapseNote: store.relapses.first { $0.date == r.date }?.note)
-                        .onTapGesture { selectedDate = DaySelection(day: r.date) }
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, r in
+                    TimelineEntry(
+                        record: r,
+                        relapseNote: store.relapses.first { $0.date == r.date }?.note,
+                        isFirst: index == 0,
+                        isLast: index == items.count - 1
+                    )
+                    .onTapGesture { selectedDate = DaySelection(day: r.date) }
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
     }
 
@@ -254,46 +260,89 @@ struct CalendarCell: View {
     }
 }
 
-struct TimelineRow: View {
+/// 时间线单条目：日期列 + 竖线圆点 + 内容
+struct TimelineEntry: View {
     let record: DailyRecord
     var relapseNote: String?
+    var isFirst: Bool
+    var isLast: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(record.date)
-                    .font(.system(size: 14, weight: .semibold).monospacedDigit())
-                if relapseNote != nil {
-                    Chip(text: "破戒日", selected: true, tint: .orange)
-                }
-                Spacer()
-            }
-
-            HStack(spacing: 6) {
-                if let mood = record.mood { Chip(text: "心态 \(mood)", selected: true) }
-                ForEach(record.emotions.prefix(3), id: \.self) { e in
-                    Chip(text: e, selected: true, tint: .purple)
-                }
-                if let state = record.state { Chip(text: state, selected: true, tint: .teal) }
-                Spacer()
-            }
-
-            if let text = record.freeText, !text.isEmpty {
-                Text(text)
-                    .font(.system(size: 13))
+        HStack(alignment: .top, spacing: 14) {
+            // 左：日期列
+            VStack(alignment: .leading, spacing: 2) {
+                Text(DateUtil.display(record.date, style: store.dateStyle))
+                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                Text(weekdayText)
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            } else if let p = record.perception, !p.isEmpty {
-                Text(p)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
             }
+            .frame(width: 92, alignment: .leading)
+            .padding(.top, 2)
+
+            // 中：竖线 + 圆点
+            VStack(spacing: 0) {
+                if !isFirst {
+                    Rectangle().fill(lineColor).frame(width: 2).frame(maxHeight: .infinity)
+                } else {
+                    Color.clear.frame(width: 2, height: 10)
+                }
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 12, height: 12)
+                    .overlay(Circle().strokeBorder(Color(nsColor: .controlBackgroundColor), lineWidth: 2))
+                if !isLast {
+                    Rectangle().fill(lineColor).frame(width: 2).frame(maxHeight: .infinity)
+                } else {
+                    Color.clear.frame(width: 2, height: 10)
+                }
+            }
+            .frame(width: 16)
+
+            // 右：内容
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    if relapseNote != nil {
+                        Chip(text: "破戒日", selected: true, tint: .orange)
+                    }
+                    if let mood = record.mood { Chip(text: "心态 \(mood)", selected: true) }
+                    ForEach(record.emotions.prefix(3), id: \.self) { e in
+                        Chip(text: e, selected: true, tint: .purple)
+                    }
+                    if let state = record.state { Chip(text: state, selected: true, tint: .teal) }
+                }
+                if let text = record.freeText, !text.isEmpty {
+                    Text(text)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                } else if let p = record.perception, !p.isEmpty {
+                    Text(p)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(2)
+                }
+            }
+            .padding(.bottom, 18)
+
+            Spacer(minLength: 0)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
         .contentShape(Rectangle())
+    }
+
+    @EnvironmentObject private var store: Store
+
+    private var lineColor: Color { Color.primary.opacity(0.10) }
+
+    private var dotColor: Color {
+        if relapseNote != nil { return .orange }
+        if record.mood != nil || !record.emotions.isEmpty { return Color.accentColor }
+        return .secondary.opacity(0.5)
+    }
+
+    private var weekdayText: String {
+        guard let d = DateUtil.date(record.date) else { return "" }
+        let names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+        return names[Calendar.current.component(.weekday, from: d) - 1]
     }
 }

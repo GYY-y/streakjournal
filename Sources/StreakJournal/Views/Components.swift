@@ -250,6 +250,133 @@ struct TriStateField: View {
     }
 }
 
+/// 多行备注文本域（统一外观 + 占位符）
+struct NoteEditor: View {
+    @Binding var text: String
+    var placeholder: String = ""
+    var minHeight: CGFloat = 72
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .font(.system(size: 13))
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: minHeight)
+            if text.isEmpty {
+                Text(placeholder)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 8)
+                    .padding(.leading, 6)
+                    .allowsHitTesting(false)
+            }
+        }
+        .padding(6)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+    }
+}
+
+/// 三态选择（未填写 / 否 / 是）——胶囊样式，与选项 chips 一致
+struct TriStateChips: View {
+    let label: String
+    @Binding var value: Bool?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundStyle(.primary.opacity(0.8))
+            Spacer(minLength: 12)
+            HStack(spacing: 6) {
+                triChip(title: "未填写", isOn: value == nil) { value = nil }
+                triChip(title: "否", isOn: value == false) { value = false }
+                triChip(title: "是", isOn: value == true) { value = true }
+            }
+        }
+    }
+
+    private func triChip(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: isOn ? .semibold : .regular))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule().fill(isOn ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
+                )
+                .overlay(
+                    Capsule().strokeBorder(isOn ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.10), lineWidth: 1)
+                )
+                .foregroundStyle(isOn ? Color.accentColor : Color.primary.opacity(0.65))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 参考图风格彩色统计卡：小灰字标题 + 大彩色数字 + 副行
+struct ColoredStatCard: View {
+    let title: String
+    let value: String
+    let color: Color
+    var subtitle: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(color)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+/// 参考图风格横向进度条排行（右侧带数值）
+struct StatBarRow: View {
+    let label: String
+    let value: Int
+    let fraction: Double
+    var color: Color = .accentColor
+    var unit: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                Spacer()
+                Text("\(value)\(unit)")
+                    .font(.system(size: 12).monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.06))
+                    Capsule().fill(color.opacity(0.85))
+                        .frame(width: max(4, geo.size.width * min(1, fraction)))
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+}
+
 struct EmptyHint: View {
     let icon: String
     let title: String

@@ -26,8 +26,7 @@ struct NewCycleSheet: View {
                 .pickerStyle(.radioGroup)
 
                 if relapseMarked {
-                    TextField("破戒备注（可选）", text: $relapseNote)
-                        .textFieldStyle(.roundedBorder)
+                    NoteEditor(text: $relapseNote, placeholder: "破戒备注（可选）：发生了什么、当时的想法……")
                     Text("破戒当天会作为独立记录保留，不计入任何周期的坚持天数。")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
@@ -48,6 +47,7 @@ struct NewCycleSheet: View {
                     ),
                     displayedComponents: .date
                 )
+                .datePickerStyle(.field)
                 .labelsHidden()
                 if relapseMarked {
                     Text("若标记破戒，建议从明天开始新周期，让破戒当天保持独立。")
@@ -121,9 +121,9 @@ struct BackdatedRelapseSheet: View {
                 in: ...Date(),
                 displayedComponents: .date
             )
+            .datePickerStyle(.field)
 
-            TextField("备注（可选）", text: $note)
-                .textFieldStyle(.roundedBorder)
+            NoteEditor(text: $note, placeholder: "备注（可选）：发生了什么、当时的想法……")
 
             Text("补录后：当前周期结束于破戒日前一天；若破戒日在今天之前，将从次日重新开始计算。")
                 .font(.caption)
