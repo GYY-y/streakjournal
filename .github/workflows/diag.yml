@@ -5,11 +5,19 @@ on:
       - diag-test
   workflow_dispatch:
 jobs:
-  ubuntu-test:
+  macos-14:
+    runs-on: macos-14
+    steps:
+      - run: echo "macos-14 ok"
+  macos-15:
+    runs-on: macos-15
+    steps:
+      - run: echo "macos-15 ok"
+  macos-latest:
+    runs-on: macos-latest
+    steps:
+      - run: echo "macos-latest ok"
+  ubuntu:
     runs-on: ubuntu-latest
     steps:
       - run: echo "ubuntu ok"
-  macos-test:
-    runs-on: macos-14
-    steps:
-      - run: echo "macos ok"
