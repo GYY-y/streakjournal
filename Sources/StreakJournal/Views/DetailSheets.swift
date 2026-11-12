@@ -25,12 +25,12 @@ struct RecordDetailSheet: View {
                     if let relapseEvent = relapse {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(.red)
                             Text(relapseTitle(relapseEvent))
                                 .font(.callout.weight(.medium))
                         }
                         .padding(10)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.10)))
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.10)))
                     }
 
                     if let cycle = cycleFor(date) {
@@ -64,7 +64,7 @@ struct RecordDetailSheet: View {
                 Chip(text: "周期开始", selected: true)
             }
             if store.relapseSet().contains(date) {
-                Chip(text: "破戒", selected: true, tint: .orange)
+                Chip(text: "破戒", selected: true, tint: .red)
             }
             if store.record(for: date) != nil {
                 Chip(text: "有记录", selected: true, tint: .teal)
