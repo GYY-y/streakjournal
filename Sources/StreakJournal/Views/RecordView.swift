@@ -45,24 +45,16 @@ struct RecordView: View {
                     ), placeholder: "与行为相关的备注（可选）……", minHeight: 60)
                 }
                 SectionCard(title: "今日变化与感知") {
-                    TextEditor(text: Binding(
+                    NoteEditor(text: Binding(
                         get: { draft.perception ?? "" },
                         set: { draft.perception = $0.isEmpty ? nil : $0 }
-                    ))
-                    .frame(minHeight: 70)
-                    .scrollContentBackground(.hidden)
-                    .font(.system(size: 13))
-                    .placeholder("今天感受到了什么变化？例如：工作时注意力比较集中 / 精神状态不错 / 有些疲惫…", when: (draft.perception ?? "").isEmpty)
+                    ), placeholder: "今天感受到了什么变化？例如：工作时注意力比较集中 / 精神状态不错 / 有些疲惫…", minHeight: 70)
                 }
                 SectionCard(title: "自由记录") {
-                    TextEditor(text: Binding(
+                    NoteEditor(text: Binding(
                         get: { draft.freeText ?? "" },
                         set: { draft.freeText = $0.isEmpty ? nil : $0 }
-                    ))
-                    .frame(minHeight: 140)
-                    .scrollContentBackground(.hidden)
-                    .font(.system(size: 13))
-                    .placeholder("今天发生了什么、想了什么、遇到什么问题……不受模板限制，写你想留下的。", when: (draft.freeText ?? "").isEmpty)
+                    ), placeholder: "今天发生了什么、想了什么、遇到什么问题……不受模板限制，写你想留下的。", minHeight: 140)
                 }
 
                 footerBar
@@ -77,29 +69,32 @@ struct RecordView: View {
     // MARK: 子视图
 
     private var dateBar: some View {
-        HStack {
-            Button { currentDate = DateUtil.addDays(currentDate, -1) } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(.borderless)
-
+        HStack(spacing: 16) {
             Spacer()
 
-            CalendarDateField(
-                date: Binding(
-                    get: { DateUtil.date(currentDate) ?? Date() },
-                    set: { currentDate = DateUtil.key($0) }
-                ),
-                range: Date.distantPast...Date()
-            )
+            // 左右箭头紧贴日期两侧
+            HStack(spacing: 10) {
+                Button { currentDate = DateUtil.addDays(currentDate, -1) } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .buttonStyle(.borderless)
+
+                CalendarDateField(
+                    date: Binding(
+                        get: { DateUtil.date(currentDate) ?? Date() },
+                        set: { currentDate = DateUtil.key($0) }
+                    ),
+                    range: Date.distantPast...Date()
+                )
+
+                Button { currentDate = DateUtil.addDays(currentDate, 1) } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.borderless)
+                .disabled(currentDate >= store.todayKey)
+            }
 
             Spacer()
-
-            Button { currentDate = DateUtil.addDays(currentDate, 1) } label: {
-                Image(systemName: "chevron.right")
-            }
-            .buttonStyle(.borderless)
-            .disabled(currentDate >= store.todayKey)
 
             Button("回到今天") { currentDate = store.todayKey }
                 .buttonStyle(.borderless)
@@ -212,23 +207,6 @@ struct FlowLayout: Layout {
             subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
             x += size.width + spacing
             rowHeight = max(rowHeight, size.height)
-        }
-    }
-}
-
-// MARK: - TextEditor 占位符
-
-extension View {
-    func placeholder(_ text: String, when condition: Bool) -> some View {
-        overlay(alignment: .topLeading) {
-            if condition {
-                Text(text)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 8)
-                    .padding(.leading, 6)
-                    .allowsHitTesting(false)
-            }
         }
     }
 }

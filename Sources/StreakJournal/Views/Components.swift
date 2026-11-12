@@ -298,30 +298,21 @@ struct CalendarDateField: View {
     }
 }
 
-/// 多行备注文本域（统一外观 + 占位符）
+/// 多行备注输入框（统一外观；用 TextField 垂直轴模式，placeholder 与光标天然齐平）
 struct NoteEditor: View {
     @Binding var text: String
     var placeholder: String = ""
     var minHeight: CGFloat = 72
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            TextEditor(text: $text)
-                .font(.system(size: 13))
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: minHeight)
-            if text.isEmpty {
-                Text(placeholder)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 8)
-                    .padding(.leading, 6)
-                    .allowsHitTesting(false)
-            }
-        }
-        .padding(6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+        TextField(placeholder, text: $text, axis: .vertical)
+            .textFieldStyle(.plain)
+            .font(.system(size: 13))
+            .lineLimit(1...20)
+            .frame(minHeight: minHeight, alignment: .topLeading)
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
     }
 }
 

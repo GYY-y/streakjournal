@@ -117,12 +117,6 @@ struct RecordContent: View {
             if let state = record.state {
                 field("今日状态") { Chip(text: state, selected: true, tint: .teal) }
             }
-            if let p = record.perception {
-                field("变化与感知") { Text(p).font(.system(size: 13)) }
-            }
-            if let t = record.freeText {
-                field("自由记录") { Text(t).font(.system(size: 13)) }
-            }
 
             let behavior = behaviorLines
             if !behavior.isEmpty {
@@ -136,6 +130,13 @@ struct RecordContent: View {
                         }
                     }
                 }
+            }
+
+            if let p = record.perception {
+                field("变化与感知") { Text(p).font(.system(size: 13)) }
+            }
+            if let t = record.freeText {
+                field("自由记录") { Text(t).font(.system(size: 13)) }
             }
 
             Text("最后更新：\(DateUtil.displayDateTime(record.updatedAt))")

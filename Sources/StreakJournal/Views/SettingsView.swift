@@ -4,50 +4,17 @@ import AppKit
 struct SettingsView: View {
     @EnvironmentObject private var store: Store
 
-    @State private var editingCycle: Cycle?
-    @State private var cycleToDelete: Cycle?
-    @State private var relapseToDelete: RelapseEvent?
     @State private var backupToRestore: String?
     @State private var confirmImport = false
     @State private var pendingImportURL: URL?
-    @State private var adjustStart: Date = Date()
-    @State private var showAdjustConfirm = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 basicGroup
-                cycleGroup
                 dataGroup
             }
             .padding(24)
-        }
-        .sheet(item: $editingCycle) { cycle in
-            CycleEditSheet(cycle: cycle)
-        }
-        .confirmationDialog(
-            "确定删除这段周期吗？",
-            isPresented: Binding(get: { cycleToDelete != nil }, set: { if !$0 { cycleToDelete = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("删除周期", role: .destructive) {
-                if let c = cycleToDelete { store.deleteCycle(c) }
-                cycleToDelete = nil
-            }
-        } message: {
-            Text("删除周期不会删除每日记录和破戒事件，但对应的坚持天数统计会随之减少。")
-        }
-        .confirmationDialog(
-            "确定删除这条破戒记录吗？",
-            isPresented: Binding(get: { relapseToDelete != nil }, set: { if !$0 { relapseToDelete = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("删除破戒记录", role: .destructive) {
-                if let r = relapseToDelete { store.deleteRelapse(r) }
-                relapseToDelete = nil
-            }
-        } message: {
-            Text("删除后对应的破戒日标记将从日历中消失。")
         }
         .confirmationDialog(
             "恢复备份将覆盖当前全部数据",
@@ -129,65 +96,6 @@ struct SettingsView: View {
                     .pickerStyle(.menu)
                     .frame(width: 150)
                     .labelsHidden()
-                }
-            }
-        }
-    }
-
-    // MARK: - 周期与破戒
-
-    private var cycleGroup: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GroupHeader(text: "周期与破戒")
-            SettingsGroup {
-                if let cycle = store.activeCycle {
-                    SettingRow(icon: "flag.checkered", color: .green, title: "当前周期开始日期", subtitle: "调整后坚持天数会按新日期重新计算") {
-                        CalendarDateField(date: $adjustStart, range: Date.distantPast...Date())
-                        PillButton(title: "应用调整", color: .blue) { showAdjustConfirm = true }
-                            .disabled(DateUtil.key(adjustStart) == cycle.startDate)
-                    }
-                    RowDivider()
-                } else {
-                    SettingRow(icon: "flag", color: .secondary.opacity(0.6), title: "当前没有进行中的周期", subtitle: "可以在首页开启第一个周期") {
-                        EmptyView()
-                    }
-                    RowDivider()
-                }
-
-                ForEach(Array(store.cycles.enumerated().reversed()), id: \.element.id) { index, cycle in
-                    SettingRow(
-                        icon: cycle.isActive ? "play.circle.fill" : "checkmark.circle.fill",
-                        color: cycle.isActive ? .green : .gray,
-                        title: "第 \(store.cycles.count - index) 段 · \(DateUtil.display(cycle.startDate, style: store.dateStyle)) – \(cycle.endDate.map { DateUtil.display($0, style: store.dateStyle) } ?? "至今")",
-                        subtitle: cycle.note
-                    ) {
-                        if cycle.isActive {
-                            ValueText(text: "坚持中 · \(cycle.days) 天", color: .green)
-                        } else {
-                            ValueText(text: "\(cycle.days) 天", color: .secondary)
-                        }
-                        PillButton(title: "编辑", color: .gray) { editingCycle = cycle }
-                        PillButton(title: "删除", color: .red) { cycleToDelete = cycle }
-                    }
-                    RowDivider()
-                }
-
-                ForEach(store.relapses) { r in
-                    SettingRow(
-                        icon: "exclamationmark.triangle.fill",
-                        color: .orange,
-                        title: "破戒日 · \(DateUtil.display(r.date, style: store.dateStyle))",
-                        subtitle: r.note
-                    ) {
-                        PillButton(title: "删除", color: .red) { relapseToDelete = r }
-                    }
-                    RowDivider()
-                }
-
-                if store.cycles.isEmpty && store.relapses.isEmpty {
-                    SettingRow(icon: "tray", color: .gray, title: "暂无周期与破戒记录") {
-                        EmptyView()
-                    }
                 }
             }
         }

@@ -6,11 +6,13 @@ struct HomeView: View {
     @State private var showNewCycleSheet = false
     @State private var showBackdatedSheet = false
 
+    /// 操作单选组：默认选中「坚持中」；选择动作项会弹出对应面板，结束后回到「坚持中」
+    @State private var selectedAction = "坚持中"
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 streakCard
-                encouragementCard
                 actionPills
                 if let cycle = store.activeCycle {
                     SectionCard(title: "当前周期") {
@@ -33,8 +35,8 @@ struct HomeView: View {
         .onAppear {
             encouragement = Encouragement.message(days: store.currentStreak)
         }
-        .sheet(isPresented: $showNewCycleSheet) { NewCycleSheet() }
-        .sheet(isPresented: $showBackdatedSheet) { BackdatedRelapseSheet() }
+        .sheet(isPresented: $showNewCycleSheet, onDismiss: { selectedAction = "坚持中" }) { NewCycleSheet() }
+        .sheet(isPresented: $showBackdatedSheet, onDismiss: { selectedAction = "坚持中" }) { BackdatedRelapseSheet() }
     }
 
     // MARK: 子视图
@@ -71,6 +73,17 @@ struct HomeView: View {
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 4)
             }
+
+            // 鼓励语：作为主卡片的一部分，跟在数字/引导文案下方
+            HStack(spacing: 6) {
+                Image(systemName: "quote.opening")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                Text(encouragement)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 6)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
@@ -78,40 +91,15 @@ struct HomeView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
     }
 
-    private var encouragementCard: some View {
-        HStack {
-            Image(systemName: "quote.opening")
-                .foregroundStyle(.tertiary)
-            Text(encouragement)
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.06)))
-    }
-
-    /// 椭圆形操作按钮行：「坚持中」默认选中，「开启新的周期」「补录破戒」可点击
+    /// 单选胶囊组：三个选项同一配色（主题色高亮选中项），「坚持中」默认选中
     private var actionPills: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             if store.activeCycle != nil {
-                // 状态胶囊：默认选中
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 12))
-                    Text("坚持中")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(Color.green.opacity(0.15)))
-                .overlay(Capsule().strokeBorder(Color.green.opacity(0.55), lineWidth: 1))
-                .foregroundStyle(.green)
-
-                pillButton(title: "开启新的周期", icon: "arrow.counterclockwise", tint: .accentColor) {
+                actionPill("坚持中", icon: "checkmark.circle.fill")
+                actionPill("开启新的周期", icon: "arrow.counterclockwise") {
                     showNewCycleSheet = true
                 }
-                pillButton(title: "补录破戒", icon: "clock.badge.exclamationmark", tint: .orange) {
+                actionPill("补录破戒", icon: "clock.badge.exclamationmark") {
                     showBackdatedSheet = true
                 }
             }
@@ -119,19 +107,27 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func pillButton(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func actionPill(_ title: String, icon: String, action: (() -> Void)? = nil) -> some View {
+        let isSelected = selectedAction == title
+        return Button {
+            selectedAction = title
+            action?()
+        } label: {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 12))
                 Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 8)
-            .background(Capsule().fill(tint.opacity(0.10)))
-            .overlay(Capsule().strokeBorder(tint.opacity(0.45), lineWidth: 1))
-            .foregroundStyle(tint)
+            .background(
+                Capsule().fill(isSelected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                Capsule().strokeBorder(isSelected ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.10), lineWidth: 1)
+            )
+            .foregroundStyle(isSelected ? Color.accentColor : Color.primary.opacity(0.65))
         }
         .buttonStyle(.plain)
     }
