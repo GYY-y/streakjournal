@@ -76,7 +76,6 @@ struct SettingsView: View {
                         get: { L10n.shared.lang },
                         set: { L10n.shared.lang = $0 }
                     )) {
-                        Text(L("跟随系统")).tag(L10n.Lang.system)
                         Text("简体中文").tag(L10n.Lang.zhHans)
                         Text("繁體中文").tag(L10n.Lang.zhHant)
                         Text("English").tag(L10n.Lang.en)

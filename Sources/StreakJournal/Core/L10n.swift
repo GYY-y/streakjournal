@@ -7,7 +7,7 @@ final class L10n: ObservableObject {
     static let shared = L10n()
 
     enum Lang: String, CaseIterable, Identifiable {
-        case system, zhHans, zhHant, en
+        case zhHans, zhHant, en
         var id: String { rawValue }
     }
 
@@ -18,23 +18,16 @@ final class L10n: ObservableObject {
     }
 
     private init() {
-        lang = Lang(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .system
+        // 默认简体中文；历史遗留的 "system" 值也归到简体
+        let raw = UserDefaults.standard.string(forKey: "appLanguage") ?? ""
+        lang = Lang(rawValue: raw) ?? .zhHans
     }
 
-    var resolved: Resolved { Self.resolve(lang) }
-
-    /// "system" 时按系统首选语言解析（zh-Hant/zh-TW/zh-HK → 繁体，en → 英语，其余 → 简体）
-    static func resolve(_ l: Lang) -> Resolved {
-        switch l {
+    var resolved: Resolved {
+        switch lang {
         case .zhHans: return .zhHans
         case .zhHant: return .zhHant
         case .en: return .en
-        case .system:
-            let preferred = (Locale.preferredLanguages.first ?? "zh-Hans").lowercased()
-            if preferred.hasPrefix("zh") {
-                return preferred.contains("hant") || preferred.contains("-tw") || preferred.contains("-hk") || preferred.contains("-mo") ? .zhHant : .zhHans
-            }
-            return preferred.hasPrefix("en") ? .en : .zhHans
         }
     }
 
