@@ -19,12 +19,6 @@ struct StreakJournalApp: App {
                     StatusItemController.shared.installIfNeeded()
                 }
         }
-        .commands {
-            CommandGroup(after: .newItem) {
-                Button("手动备份") { Store.shared.manualBackup() }
-                    .keyboardShortcut("b", modifiers: [.command, .shift])
-            }
-        }
     }
 
     /// 用 NSApp.appearance 控制主题：从固定主题切回"跟随系统"时设为 nil 即可恢复系统外观，
@@ -38,47 +32,78 @@ struct StreakJournalApp: App {
     }
 }
 
-/// 菜单栏面板：坚持天数速览 + 快捷操作
+/// 菜单栏面板：仿原生菜单样式（标签左、数值右）
 struct MenuBarPanel: View {
     @ObservedObject var store: Store
+    @State private var hoveredAction: String?
 
     var body: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "flame.fill")
-                    .foregroundStyle(.orange)
-                Text(store.activeCycle != nil ? "已坚持 \(store.currentStreak) 天" : "还没有进行中的周期")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            // 状态区（不可点击）
+            menuRow(label: "已坚持", value: store.activeCycle != nil ? "\(store.currentStreak) 天" : "未开始")
 
-            HStack(spacing: 8) {
+            HStack(spacing: 0) {
+                Text("今日记录")
+                    .font(.system(size: 13))
+                Spacer()
                 if store.hasRecordToday {
-                    Label("今天已记录", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 12))
+                    Text("已记录")
+                        .font(.system(size: 13))
                         .foregroundStyle(.green)
                 } else {
-                    Label("今天还没有记录", systemImage: "circle.dashed")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                    Text("今天还没记录")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.red)
                 }
-                Spacer()
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
 
-            Divider()
+            Divider().padding(.vertical, 4)
 
-            Button("打开主窗口") { activate(page: nil) }
-            Button("填写今日记录") { activate(page: .record) }
-            Button("查看勋章墙") { activate(page: .badges) }
-            Button("手动备份") { store.manualBackup() }
+            actionButton("打开主窗口") { activate(page: nil) }
+            actionButton("设置") { activate(page: .settings) }
 
-            Divider()
+            Divider().padding(.vertical, 4)
 
-            Button("退出坚持记录") { NSApp.terminate(nil) }
+            actionButton("退出") { NSApp.terminate(nil) }
         }
-        .padding(10)
-        .frame(width: 220)
+        .padding(.vertical, 6)
+        .frame(width: 230)
+    }
+
+    private func menuRow(label: String, value: String) -> some View {
+        HStack(spacing: 0) {
+            Text(label)
+                .font(.system(size: 13))
+            Spacer()
+            Text(value)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+    }
+
+    private func actionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+        } label: {
+            Text(title)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .contentShape(Rectangle())
+        }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(hoveredAction == title ? Color.accentColor.opacity(0.15) : .clear)
+        )
+        .onHover { hovering in
+            hoveredAction = hovering ? title : (hoveredAction == title ? nil : hoveredAction)
+        }
     }
 
     private func activate(page: Page?) {
@@ -125,7 +150,7 @@ final class StatusItemController: NSObject {
 
         popover.contentViewController = NSHostingController(rootView: MenuBarPanel(store: Store.shared))
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 230, height: 210)
+        popover.contentSize = NSSize(width: 230, height: 180)
 
         button.target = self
         button.action = #selector(togglePopover)

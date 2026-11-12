@@ -42,7 +42,7 @@ struct AboutView: View {
                         EmptyView()
                     }
                     RowDivider()
-                    SettingRow(icon: "externaldrive", color: .indigo, title: "数据安全", subtitle: "全部数据保存在本机（\(Database.dataDirectory.path)），自动备份保留最近 10 份，支持导出与恢复。") {
+                    SettingRow(icon: "externaldrive", color: .indigo, title: "数据安全", subtitle: "全部数据保存在本机（\(Database.dataDirectory.path)），系统每 12 小时自动备份一次（保留最近 10 份），支持导出与恢复。") {
                         EmptyView()
                     }
                 }

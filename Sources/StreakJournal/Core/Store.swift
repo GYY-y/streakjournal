@@ -32,6 +32,7 @@ final class Store: ObservableObject {
 
     private let db = Database()
     private var bootstrapped = false
+    private var backupTimer: Timer?
 
     // MARK: - 启动
 
@@ -41,6 +42,7 @@ final class Store: ObservableObject {
         do {
             try db.open()
             autoBackupIfNeeded()
+            startBackupTimer()
             reload()
         } catch {
             lastMessage = "数据库打开失败：\(error.localizedDescription)"
@@ -249,20 +251,16 @@ final class Store: ObservableObject {
         }
     }
 
-    // MARK: - 备份
+    // MARK: - 备份（系统自动，每 12 小时一次，无手动入口）
 
-    @discardableResult
-    func manualBackup() -> String? {
-        let name = "backup-\(Date().timeIntervalSince1970).db"
-        let url = Database.backupsDirectory.appendingPathComponent(name)
-        do {
-            try db.backup(to: url)
-            pruneBackups(keep: 10)
-            lastMessage = "备份完成"
-            return url.lastPathComponent
-        } catch {
-            lastMessage = "备份失败：\(error.localizedDescription)"
-            return nil
+    private static let backupInterval: TimeInterval = 12 * 60 * 60   // 12 小时
+
+    /// 每 30 分钟检查一次：距上次备份超过 12 小时就自动备份。
+    /// 兼顾"应用一直开着"和"每天短时间打开"两种情况——启动时也会检查。
+    private func startBackupTimer() {
+        guard backupTimer == nil else { return }
+        backupTimer = Timer.scheduledTimer(withTimeInterval: 30 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.autoBackupIfNeeded() }
         }
     }
 
@@ -271,7 +269,7 @@ final class Store: ObservableObject {
         if let last = files.first,
            let attr = try? FileManager.default.attributesOfItem(atPath: last.path),
            let modified = attr[.modificationDate] as? Date,
-           Date().timeIntervalSince(modified) < 86_400 {
+           Date().timeIntervalSince(modified) < Self.backupInterval {
             return
         }
         let name = "backup-\(Date().timeIntervalSince1970).db"

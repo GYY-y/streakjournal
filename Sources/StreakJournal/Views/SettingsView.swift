@@ -116,14 +116,10 @@ struct SettingsView: View {
                     PillButton(title: "导入", color: .teal) { pickImportFile() }
                 }
                 RowDivider()
-                if backups.isEmpty {
-                    SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "手动备份", subtitle: "还没有备份文件，点击右侧创建第一份") {
-                        PillButton(title: "备份", color: .green) { store.manualBackup() }
-                    }
-                    RowDivider()
-                } else {
-                    SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "备份记录", subtitle: "共 \(backups.count) 份（自动备份超过 24 小时一次，保留最近 10 份），点击备份可恢复") {
-                        Menu {
+                SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: backups.isEmpty ? "自动备份" : "备份记录", subtitle: backups.isEmpty
+                    ? "系统每 12 小时自动备份一次（保留最近 10 份），暂无备份文件"
+                    : "共 \(backups.count) 份，系统每 12 小时自动备份一次（保留最近 10 份），点击可恢复") {
+                    Menu {
                             ForEach(backups, id: \.lastPathComponent) { url in
                                 Button {
                                     backupToRestore = url.lastPathComponent
@@ -145,9 +141,8 @@ struct SettingsView: View {
                         }
                         .menuStyle(.borderlessButton)
                         .fixedSize()
-                    }
-                    RowDivider()
                 }
+                RowDivider()
 
                 SettingRow(icon: "folder", color: .yellow, title: "数据目录", subtitle: Database.dataDirectory.path) {
                     PillButton(title: "打开", color: .gray) {
