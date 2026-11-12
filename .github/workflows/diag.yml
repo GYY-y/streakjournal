@@ -1,0 +1,15 @@
+name: Diag
+on:
+  push:
+    branches:
+      - diag-test
+  workflow_dispatch:
+jobs:
+  ubuntu-test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ubuntu ok"
+  macos-test:
+    runs-on: macos-14
+    steps:
+      - run: echo "macos ok"
