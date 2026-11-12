@@ -32,26 +32,33 @@ struct StreakJournalApp: App {
     }
 }
 
-/// 菜单栏面板：仿原生菜单样式（标签左、数值右）
+/// 菜单栏刷新通知：每次点开状态项图标时，面板重新抽一句语录
+extension Notification.Name {
+    static let menuBarPanelWillShow = Notification.Name("menuBarPanelWillShow")
+}
+
+/// 菜单栏面板：仿原生菜单样式（标签左、数值右）+ 一句哲学语录
 struct MenuBarPanel: View {
     @ObservedObject var store: Store
+    @ObservedObject private var l10n = L10n.shared
     @State private var hoveredAction: String?
+    @State private var quote = Quotes.random()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 状态区（不可点击）
-            menuRow(label: "已坚持", value: store.activeCycle != nil ? "\(store.currentStreak) 天" : "未开始")
+            menuRow(label: L("已坚持"), value: store.activeCycle != nil ? LF("%@ 天", "\(store.currentStreak)") : L("未开始"))
 
             HStack(spacing: 0) {
-                Text("今日记录")
+                Text(L("今日记录"))
                     .font(.system(size: 13))
                 Spacer()
                 if store.hasRecordToday {
-                    Text("已记录")
+                    Text(L("已记录"))
                         .font(.system(size: 13))
                         .foregroundStyle(.green)
                 } else {
-                    Text("今天还没记录")
+                    Text(L("今天还没记录"))
                         .font(.system(size: 13))
                         .foregroundStyle(.red)
                 }
@@ -59,17 +66,36 @@ struct MenuBarPanel: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
 
+            // 哲学语录：每次点开菜单栏换一句
+            VStack(alignment: .leading, spacing: 2) {
+                Text("「\(quote.text(l10n.resolved))」")
+                    .font(.system(size: 11, design: .serif))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("—— \(quote.author(l10n.resolved))")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
             Divider().padding(.vertical, 4)
 
-            actionButton("打开主窗口") { activate(page: nil) }
-            actionButton("设置") { activate(page: .settings) }
+            actionButton(L("打开主窗口"), key: "open") { activate(page: nil) }
+            actionButton(L("设置"), key: "settings") { activate(page: .settings) }
 
             Divider().padding(.vertical, 4)
 
-            actionButton("退出") { NSApp.terminate(nil) }
+            actionButton(L("退出"), key: "quit") { NSApp.terminate(nil) }
         }
         .padding(.vertical, 6)
-        .frame(width: 230)
+        .frame(width: 250)
+        .onAppear { quote = Quotes.random() }
+        .onReceive(NotificationCenter.default.publisher(for: .menuBarPanelWillShow)) { _ in
+            quote = Quotes.random()
+        }
     }
 
     private func menuRow(label: String, value: String) -> some View {
@@ -85,7 +111,7 @@ struct MenuBarPanel: View {
         .padding(.vertical, 5)
     }
 
-    private func actionButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func actionButton(_ title: String, key: String, action: @escaping () -> Void) -> some View {
         Button {
             action()
         } label: {
@@ -99,10 +125,10 @@ struct MenuBarPanel: View {
         .buttonStyle(.plain)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(hoveredAction == title ? Color.accentColor.opacity(0.15) : .clear)
+                .fill(hoveredAction == key ? Color.accentColor.opacity(0.15) : .clear)
         )
         .onHover { hovering in
-            hoveredAction = hovering ? title : (hoveredAction == title ? nil : hoveredAction)
+            hoveredAction = hovering ? key : (hoveredAction == key ? nil : hoveredAction)
         }
     }
 
@@ -150,7 +176,7 @@ final class StatusItemController: NSObject {
 
         popover.contentViewController = NSHostingController(rootView: MenuBarPanel(store: Store.shared))
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 230, height: 180)
+        popover.contentSize = NSSize(width: 250, height: 280)
 
         button.target = self
         button.action = #selector(togglePopover)
@@ -162,10 +188,10 @@ final class StatusItemController: NSObject {
     @objc private func togglePopover() {
         if NSApp.currentEvent?.type == .rightMouseUp {
             let menu = NSMenu()
-            let openItem = NSMenuItem(title: "打开主窗口", action: #selector(openMain), keyEquivalent: "")
+            let openItem = NSMenuItem(title: L("打开主窗口"), action: #selector(openMain), keyEquivalent: "")
             openItem.target = self
             menu.addItem(openItem)
-            let quitItem = NSMenuItem(title: "退出坚持记录", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+            let quitItem = NSMenuItem(title: L("退出"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
             quitItem.target = NSApp
             menu.addItem(quitItem)
             if let button = statusItem?.button {
@@ -180,6 +206,7 @@ final class StatusItemController: NSObject {
             popover.performClose(nil)
         } else {
             NSApp.activate(ignoringOtherApps: true)
+            NotificationCenter.default.post(name: .menuBarPanelWillShow, object: nil)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }

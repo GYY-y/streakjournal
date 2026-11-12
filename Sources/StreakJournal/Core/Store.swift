@@ -45,7 +45,7 @@ final class Store: ObservableObject {
             startBackupTimer()
             reload()
         } catch {
-            lastMessage = "数据库打开失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("数据库打开失败：%@", error.localizedDescription)
         }
     }
 
@@ -55,7 +55,7 @@ final class Store: ObservableObject {
             relapses = try db.fetchRelapses()
             records = try db.fetchRecords()
         } catch {
-            lastMessage = "数据读取失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("数据读取失败：%@", error.localizedDescription)
         }
     }
 
@@ -132,9 +132,9 @@ final class Store: ObservableObject {
         do {
             _ = try db.insertCycle(start: start, isActive: true, note: nil)
             reload()
-            lastMessage = "已开启新的坚持周期（\(DateUtil.display(start, style: dateStyle))）"
+            lastMessage = L10n.f("已开启新的坚持周期（%@）", DateUtil.display(start, style: dateStyle))
         } catch {
-            lastMessage = "创建周期失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("创建周期失败：%@", error.localizedDescription)
         }
     }
 
@@ -162,11 +162,11 @@ final class Store: ObservableObject {
                 _ = try db.insertCycle(start: newStart, isActive: true, note: nil)
             }
             reload()
-            let suffix = relapseMarked ? "，已记录破戒事件" : ""
-            lastMessage = "已开启新的坚持周期（\(DateUtil.display(newStart, style: dateStyle))）\(suffix)"
+            let suffix = relapseMarked ? L("，已记录破戒事件") : ""
+            lastMessage = L10n.f("已开启新的坚持周期（%@）", DateUtil.display(newStart, style: dateStyle)) + suffix
         } catch {
             reload()
-            lastMessage = "开启新周期失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("开启新周期失败：%@", error.localizedDescription)
         }
     }
 
@@ -175,7 +175,7 @@ final class Store: ObservableObject {
     func markBackdatedRelapse(date: String, note: String?) {
         let today = todayKey
         guard let d = DateUtil.days(from: date, to: today), d >= 0 else {
-            lastMessage = "破戒日期不能晚于今天"
+            lastMessage = L("破戒日期不能晚于今天")
             return
         }
         do {
@@ -196,10 +196,10 @@ final class Store: ObservableObject {
                 }
             }
             reload()
-            lastMessage = "已补录破戒事件（\(DateUtil.display(date, style: dateStyle))）"
+            lastMessage = L10n.f("已补录破戒事件（%@）", DateUtil.display(date, style: dateStyle))
         } catch {
             reload()
-            lastMessage = "补录失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("补录失败：%@", error.localizedDescription)
         }
     }
 
@@ -208,7 +208,7 @@ final class Store: ObservableObject {
             try db.updateCycle(id: cycle.id, start: cycle.startDate, end: cycle.endDate, active: cycle.isActive, note: cycle.note)
             reload()
         } catch {
-            lastMessage = "周期修改失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("周期修改失败：%@", error.localizedDescription)
         }
     }
 
@@ -217,7 +217,7 @@ final class Store: ObservableObject {
             try db.deleteCycle(id: cycle.id)
             reload()
         } catch {
-            lastMessage = "周期删除失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("周期删除失败：%@", error.localizedDescription)
         }
     }
 
@@ -226,7 +226,7 @@ final class Store: ObservableObject {
             try db.deleteRelapse(date: relapse.date)
             reload()
         } catch {
-            lastMessage = "删除破戒记录失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("删除破戒记录失败：%@", error.localizedDescription)
         }
     }
 
@@ -238,7 +238,7 @@ final class Store: ObservableObject {
             reload()
             lastSavedAt = Date()
         } catch {
-            lastMessage = "保存失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("保存失败：%@", error.localizedDescription)
         }
     }
 
@@ -247,7 +247,7 @@ final class Store: ObservableObject {
             try db.deleteRecord(date: date)
             reload()
         } catch {
-            lastMessage = "删除记录失败：\(error.localizedDescription)"
+            lastMessage = L10n.f("删除记录失败：%@", error.localizedDescription)
         }
     }
 

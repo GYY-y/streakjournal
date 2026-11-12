@@ -13,9 +13,9 @@ struct BadgesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                badgeSection(title: "连续徽章", icon: "flame.fill", badges: Badges.streak,
+                badgeSection(title: L("连续徽章"), icon: "flame.fill", badges: Badges.streak,
                              currentValue: store.longestStreak)
-                badgeSection(title: "累计徽章", icon: "star.fill", badges: Badges.cumulative,
+                badgeSection(title: L("累计徽章"), icon: "star.fill", badges: Badges.cumulative,
                              currentValue: store.records.count)
             }
             .padding(24)
@@ -54,7 +54,7 @@ struct BadgesView: View {
         newly.forEach { achieved.insert($0.id) }
         achievedRaw = achieved.joined(separator: ",")
         let names = newly.map(\.name).joined(separator: "、")
-        store.lastMessage = "🎉 恭喜解锁新勋章：\(names)"
+        store.lastMessage = L10n.f("🎉 恭喜解锁新勋章：%@", names)
         showConfetti = true
     }
 
@@ -117,10 +117,10 @@ private struct BadgeCell: View {
             .frame(width: 84, height: 84)
             .shadow(color: unlocked && hovered ? Color(red: 0.85, green: 0.70, blue: 0.28).opacity(0.45) : .clear, radius: 10)
 
-            Text(def.name)
+            Text(def.localizedName)
                 .font(.system(size: 13, weight: unlocked ? .semibold : .regular))
                 .foregroundStyle(unlocked ? Color.primary : Color.secondary)
-            Text(def.requirement)
+            Text(def.localizedRequirement)
                 .font(.system(size: 11))
                 .foregroundStyle(unlocked ? Color(red: 0.72, green: 0.55, blue: 0.13) : Color.secondary.opacity(0.6))
         }
@@ -218,7 +218,7 @@ struct BadgeDetailOverlay: View {
                     }
                     .frame(height: 210)
 
-                    Text("恭喜解锁新徽章！")
+                    Text(L("恭喜解锁新勋章！"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color(red: 0.62, green: 0.58, blue: 1.0))
                         .padding(.top, 4)

@@ -2,12 +2,13 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: Store
-    @State private var encouragement = ""
+    @State private var quote = Quotes.random()
     @State private var showNewCycleSheet = false
     @State private var showBackdatedSheet = false
 
-    /// 操作单选组：默认选中「坚持中」；选择动作项会弹出对应面板，结束后回到「坚持中」
+    /// 操作单选组：默认选中「坚持中」；选择动作项会弹出对应面板，结束后回到「坚持中」（内部用规范键比较）
     @State private var selectedAction = "坚持中"
+    private let activeKey = "坚持中"
 
     var body: some View {
         ScrollView {
@@ -15,13 +16,13 @@ struct HomeView: View {
                 streakCard
                 actionPills
                 if let cycle = store.activeCycle {
-                    SectionCard(title: "当前周期") {
-                        LabeledRow("开始日期", DateUtil.display(cycle.startDate, style: store.dateStyle))
-                        LabeledRow("周期状态", cycle.isActive ? "坚持中" : "已结束")
+                    SectionCard(title: L("当前周期")) {
+                        LabeledRow(L("开始日期"), DateUtil.display(cycle.startDate, style: store.dateStyle))
+                        LabeledRow(L("周期状态"), cycle.isActive ? L("坚持中") : L("已结束"))
                         if store.goalDays > 0 {
                             ProgressView(value: min(Double(store.currentStreak), Double(store.goalDays)), total: Double(store.goalDays)) {
                                 HStack {
-                                    Text("目标 \(store.goalDays) 天").font(.caption).foregroundStyle(.secondary)
+                                    Text(LF("目标 %@ 天", "\(store.goalDays)")).font(.caption).foregroundStyle(.secondary)
                                     Spacer()
                                     ValueText(text: "\(min(store.currentStreak, store.goalDays))/\(store.goalDays)", color: .green)
                                 }
@@ -33,10 +34,10 @@ struct HomeView: View {
             .padding(24)
         }
         .onAppear {
-            encouragement = Encouragement.message(days: store.currentStreak)
+            quote = Quotes.random()   // 每次进入首页都换一句
         }
-        .sheet(isPresented: $showNewCycleSheet, onDismiss: { selectedAction = "坚持中" }) { NewCycleSheet() }
-        .sheet(isPresented: $showBackdatedSheet, onDismiss: { selectedAction = "坚持中" }) { BackdatedRelapseSheet() }
+        .sheet(isPresented: $showNewCycleSheet, onDismiss: { selectedAction = activeKey }) { NewCycleSheet() }
+        .sheet(isPresented: $showBackdatedSheet, onDismiss: { selectedAction = activeKey }) { BackdatedRelapseSheet() }
     }
 
     // MARK: 子视图
@@ -48,12 +49,12 @@ struct HomeView: View {
                     .font(.system(size: 72, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.accentColor)
                     .monospacedDigit()
-                Text("当前坚持天数")
+                Text(L("当前坚持天数"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 14) {
-                    Label("开始于 \(DateUtil.display(cycle.startDate, style: store.dateStyle))", systemImage: "calendar")
-                    Label("历史最长 \(store.longestStreak) 天", systemImage: "trophy")
+                    Label(LF("开始于 %@", DateUtil.display(cycle.startDate, style: store.dateStyle)), systemImage: "calendar")
+                    Label(LF("历史最长 %@ 天", "\(store.longestStreak)"), systemImage: "trophy")
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -61,29 +62,39 @@ struct HomeView: View {
                 Image(systemName: "flag.checkered")
                     .font(.system(size: 40))
                     .foregroundStyle(.tertiary)
-                Text("还没有开始坚持周期")
+                Text(L("还没有开始坚持周期"))
                     .font(.headline)
                     .foregroundStyle(.secondary)
-                Text("从今天开始，记录属于你的第一天。")
+                Text(L("从今天开始，记录属于你的第一天。"))
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
-                Button("开启第一个周期") {
+                Button(L("开启第一个周期")) {
                     store.startFirstCycle()
                 }
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 4)
             }
 
-            // 鼓励语：作为主卡片的一部分，跟在数字/引导文案下方
-            HStack(spacing: 6) {
-                Image(systemName: "quote.opening")
-                    .font(.system(size: 12))
+            // 哲学语录：作为主卡片的一部分，跟在数字/引导文案下方
+            VStack(spacing: 4) {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "quote.opening")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 2)
+                    Text(quote.text(L10n.shared.resolved))
+                        .font(.system(size: 13, design: .serif))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Text("—— \(quote.author(L10n.shared.resolved))")
+                    .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
-                Text(encouragement)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 8)
             }
             .padding(.top, 6)
+            .transition(.opacity)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
@@ -95,11 +106,11 @@ struct HomeView: View {
     private var actionPills: some View {
         HStack(spacing: 10) {
             if store.activeCycle != nil {
-                actionPill("坚持中", icon: "checkmark.circle.fill")
-                actionPill("开启新的周期", icon: "arrow.counterclockwise") {
+                actionPill(L("坚持中"), key: activeKey, icon: "checkmark.circle.fill")
+                actionPill(L("开启新的周期"), key: "开启新的周期", icon: "arrow.counterclockwise") {
                     showNewCycleSheet = true
                 }
-                actionPill("补录破戒", icon: "clock.badge.exclamationmark") {
+                actionPill(L("补录破戒"), key: "补录破戒", icon: "clock.badge.exclamationmark") {
                     showBackdatedSheet = true
                 }
             }
@@ -107,10 +118,10 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func actionPill(_ title: String, icon: String, action: (() -> Void)? = nil) -> some View {
-        let isSelected = selectedAction == title
+    private func actionPill(_ title: String, key: String, icon: String, action: (() -> Void)? = nil) -> some View {
+        let isSelected = selectedAction == key
         return Button {
-            selectedAction = title
+            selectedAction = key
             action?()
         } label: {
             HStack(spacing: 6) {

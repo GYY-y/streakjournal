@@ -220,9 +220,9 @@ struct TriStateField: View {
                 .font(.system(size: 13))
             Spacer()
             Picker(label, selection: triBinding) {
-                Text("未填写").tag(-1)
-                Text("否").tag(0)
-                Text("是").tag(1)
+                Text(L("未填写")).tag(-1)
+                Text(L("否")).tag(0)
+                Text(L("是")).tag(1)
             }
             .pickerStyle(.segmented)
             .frame(width: 180)
@@ -328,9 +328,9 @@ struct TriStateChips: View {
                 .foregroundStyle(.primary.opacity(0.8))
             Spacer(minLength: 12)
             HStack(spacing: 6) {
-                triChip(title: "未填写", isOn: value == nil) { value = nil }
-                triChip(title: "否", isOn: value == false) { value = false }
-                triChip(title: "是", isOn: value == true) { value = true }
+                triChip(title: L("未填写"), isOn: value == nil) { value = nil }
+                triChip(title: L("否"), isOn: value == false) { value = false }
+                triChip(title: L("是"), isOn: value == true) { value = true }
             }
         }
     }

@@ -74,7 +74,7 @@ struct HistoryView: View {
     private var toolbar: some View {
         HStack(spacing: 14) {
             Picker("", selection: $mode) {
-                ForEach(Mode.allCases) { m in Text(m.rawValue).tag(m) }
+                ForEach(Mode.allCases) { m in Text(L(m.rawValue)).tag(m) }
             }
             .pickerStyle(.segmented)
             .frame(width: 180)
@@ -100,24 +100,24 @@ struct HistoryView: View {
             Button { month = DateUtil.addMonths(month, 1) } label: { Image(systemName: "chevron.right") }
                 .buttonStyle(.borderless)
                 .disabled(month >= DateUtil.monthKey(DateUtil.todayKey()))
-            Button("本月") { month = DateUtil.monthKey(DateUtil.todayKey()) }
+            Button(L("本月")) { month = DateUtil.monthKey(DateUtil.todayKey()) }
                 .buttonStyle(.borderless)
         }
     }
 
     private var timelineFilters: some View {
         HStack(spacing: 10) {
-            Picker("周期", selection: $filterCycleID) {
-                Text("全部").tag(Int64(0))
+            Picker(L("周期"), selection: $filterCycleID) {
+                Text(L("全部")).tag(Int64(0))
                 ForEach(Array(store.cycles.enumerated().reversed()), id: \.element.id) { index, cycle in
-                    Text("第 \(store.cycles.count - index) 段 · \(cycle.startDate) 起 · \(cycle.days) 天")
+                    Text(LF("第 %@ 段 · %@ 起 · %@ 天", "\(store.cycles.count - index)", cycle.startDate, "\(cycle.days)"))
                         .tag(cycle.id)
                 }
             }
             .frame(width: 260)
 
-            Toggle("破戒日", isOn: $filterRelapseOnly)
-            Toggle("有记录", isOn: $filterWithRecords)
+            Toggle(L("破戒日"), isOn: $filterRelapseOnly)
+            Toggle(L("有记录"), isOn: $filterWithRecords)
         }
         .font(.system(size: 13))
         .fixedSize()
@@ -160,25 +160,25 @@ struct HistoryView: View {
         }
     }
 
-    private var weekdayHeaders: [String] { ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] }
+    private var weekdayHeaders: [String] { ["周一", "周二", "周三", "周四", "周五", "周六", "周日"].map(L) }
 
     private var legend: some View {
         HStack(spacing: 16) {
             HStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 3).fill(Color.blue.opacity(0.18)).frame(width: 10, height: 10)
-                Text("周期日（同周期同色）")
+                Text(L("周期日（同周期同色）"))
             }
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 10))
                     .foregroundStyle(.green)
-                Text("有记录")
+                Text(L("有记录"))
             }
             HStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 3).fill(Color.red.opacity(0.85)).frame(width: 10, height: 10)
-                Text("破戒日（红色警告）")
+                Text(L("破戒日（红色警告）"))
             }
-            Text("未填写记录的日期不代表当天坚持成功。")
+            Text(L("未填写记录的日期不代表当天坚持成功。"))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -195,7 +195,7 @@ struct HistoryView: View {
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 if items.isEmpty {
-                    EmptyHint(icon: "tray", title: "本月没有符合条件的记录", detail: "调整筛选条件，或切换月份查看其他时间。")
+                    EmptyHint(icon: "tray", title: L("本月没有符合条件的记录"), detail: L("调整筛选条件，或切换月份查看其他时间。"))
                 }
                 ForEach(items) { item in
                     TimelineEntry(
@@ -203,7 +203,7 @@ struct HistoryView: View {
                         record: item.record,
                         relapseNote: item.relapseNote,
                         cycleColor: cycleColor(for: item.date),
-                        cycleLabel: cycleIndex(for: item.date).map { "第 \($0) 段" },
+                        cycleLabel: cycleIndex(for: item.date).map { LF("第 %@ 段", "\($0)") },
                         isExpanded: Binding(
                             get: { expandedDays.contains(item.date) },
                             set: { if $0 { expandedDays.insert(item.date) } else { expandedDays.remove(item.date) } }
@@ -351,13 +351,13 @@ struct TimelineEntry: View {
                     Chip(text: cycleLabel, selected: true, tint: chipTint)
                 }
                 if isRelapse {
-                    Chip(text: "破戒日", selected: true, tint: chipTint)
+                    Chip(text: L("破戒日"), selected: true, tint: chipTint)
                 }
-                if let mood = record?.mood { Chip(text: mood, selected: true, tint: chipTint) }
+                if let mood = record?.mood { Chip(text: L(mood), selected: true, tint: chipTint) }
                 ForEach((record?.emotions ?? []).prefix(3), id: \.self) { e in
-                    Chip(text: e, selected: true, tint: chipTint)
+                    Chip(text: L(e), selected: true, tint: chipTint)
                 }
-                if let state = record?.state { Chip(text: state, selected: true, tint: chipTint) }
+                if let state = record?.state { Chip(text: L(state), selected: true, tint: chipTint) }
                 Spacer()
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 11, weight: .semibold))
@@ -386,14 +386,14 @@ struct TimelineEntry: View {
                 detailDivider
                 if !behaviorLines.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        sectionTitle("今日行为情况")
+                        sectionTitle(L("今日行为情况"))
                         ForEach(behaviorLines, id: \.self) { line in
                             Text("· \(line)")
                                 .font(.system(size: 13))
                                 .textSelection(.enabled)
                         }
                         if let note = record?.behaviorNote {
-                            Text("备注：\(note)")
+                            Text(LF("备注：%@", note))
                                 .font(.system(size: 13))
                                 .foregroundStyle(textColor.opacity(0.8))
                                 .textSelection(.enabled)
@@ -401,18 +401,18 @@ struct TimelineEntry: View {
                     }
                 }
                 if let p = record?.perception, !p.isEmpty {
-                    detailBlock("今日变化与感知", p)
+                    detailBlock(L("今日变化与感知"), p)
                 }
                 if let text = record?.freeText, !text.isEmpty {
-                    detailBlock("自由记录", text)
+                    detailBlock(L("自由记录"), text)
                 }
                 if isRelapse {
-                    Text("破戒备注：\(relapseNote!)")
+                    Text(LF("破戒备注：%@", relapseNote!))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(textColor)
                         .textSelection(.enabled)
                 }
-                Text("最后更新：\(record.map { DateUtil.displayDateTime($0.updatedAt) } ?? "—")")
+                Text(LF("最后更新：%@", record.map { DateUtil.displayDateTime($0.updatedAt) } ?? "—"))
                     .font(.caption2)
                     .foregroundStyle(textColor.opacity(0.55))
                     .textSelection(.enabled)
@@ -476,26 +476,26 @@ struct TimelineEntry: View {
     }
 
     private var summaryLine: String {
-        if isRelapse && record == nil { return "破戒备注：\(relapseNote ?? "")" }
+        if isRelapse && record == nil { return LF("破戒备注：%@", relapseNote ?? "") }
         if let text = record?.freeText, !text.isEmpty { return text }
         if let p = record?.perception, !p.isEmpty { return p }
-        if isRelapse { return "破戒备注：\(relapseNote ?? "")" }
-        if record?.mood != nil || !(record?.emotions.isEmpty ?? true) || record?.state != nil { return "（仅结构化记录）" }
-        return "（点击展开查看详情）"
+        if isRelapse { return LF("破戒备注：%@", relapseNote ?? "") }
+        if record?.mood != nil || !(record?.emotions.isEmpty ?? true) || record?.state != nil { return L("（仅结构化记录）") }
+        return L("（点击展开查看详情）")
     }
 
     private var behaviorLines: [String] {
         guard let record else { return [] }
         var lines: [String] = []
-        if let v = record.contactedPorn { lines.append("接触色情内容：\(v ? "是" : "否")") }
-        if let v = record.targetBehavior { lines.append("发生目标行为：\(v ? "是" : "否")") }
-        if let v = record.strongUrge { lines.append("出现明显冲动：\(v ? "是" : "否")") }
+        if let v = record.contactedPorn { lines.append(LF("接触色情内容：%@", L(v ? "是" : "否"))) }
+        if let v = record.targetBehavior { lines.append(LF("发生目标行为：%@", L(v ? "是" : "否"))) }
+        if let v = record.strongUrge { lines.append(LF("出现明显冲动：%@", L(v ? "是" : "否"))) }
         return lines
     }
 
     private var weekdayText: String {
         guard let d = DateUtil.date(date) else { return "" }
-        let names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+        let names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"].map(L)
         return names[Calendar.current.component(.weekday, from: d) - 1]
     }
 }

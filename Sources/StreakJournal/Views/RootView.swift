@@ -19,6 +19,9 @@ enum Page: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 显示名（随语言切换）
+    var title: String { L(rawValue) }
+
     var id: String { rawValue }
 }
 
@@ -32,6 +35,8 @@ final class AppNav: ObservableObject {
 struct RootView: View {
     @EnvironmentObject private var store: Store
     @ObservedObject private var nav = AppNav.shared
+    /// 观察语言变化：切换语言时整个页面树重新渲染
+    @ObservedObject private var l10n = L10n.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,7 +46,7 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("坚持记录")
+        .navigationTitle(L("坚持记录"))
         .onChange(of: nav.page) { _, new in
             UserDefaults.standard.set(new.rawValue, forKey: "lastPage")
         }
@@ -67,7 +72,7 @@ struct RootView: View {
         VStack(spacing: 0) {
             Picker("", selection: $nav.page) {
                 ForEach(Page.allCases) { page in
-                    Text(page.rawValue).tag(page)
+                    Text(page.title).tag(page)
                 }
             }
             .pickerStyle(.segmented)

@@ -16,19 +16,19 @@ struct SettingsView: View {
             .padding(24)
         }
         .confirmationDialog(
-            "导入数据将覆盖当前全部数据",
+            L("导入数据将覆盖当前全部数据"),
             isPresented: $confirmImport,
             titleVisibility: .visible
         ) {
-            Button("导入并覆盖", role: .destructive) {
+            Button(L("导入并覆盖"), role: .destructive) {
                 if let url = pendingImportURL {
                     do { try store.importData(from: url) }
-                    catch { store.lastMessage = "导入失败：\(error.localizedDescription)" }
+                    catch { store.lastMessage = LF("导入失败：%@", error.localizedDescription) }
                 }
                 pendingImportURL = nil
             }
         } message: {
-            Text("导入会用文件中的数据替换当前的周期、破戒事件和每日记录。")
+            Text(L("导入会用文件中的数据替换当前的周期、破戒事件和每日记录。"))
         }
     }
 
@@ -38,18 +38,18 @@ struct SettingsView: View {
 
     private var basicGroup: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GroupHeader(text: "应用")
+            GroupHeader(text: L("应用"))
             SettingsGroup {
-                SettingRow(icon: "target", color: .blue, title: "坚持目标", subtitle: "只用于首页进度展示，不做强制判断") {
+                SettingRow(icon: "target", color: .blue, title: L("坚持目标"), subtitle: L("只用于首页进度展示，不做强制判断")) {
                     Picker("", selection: Binding(
                         get: { store.goalDays },
                         set: { store.goalDays = $0 }
                     )) {
                         ForEach(goalOptions, id: \.self) { days in
-                            Text("\(days) 天").tag(days)
+                            Text(LF("%@ 天", "\(days)")).tag(days)
                         }
                         if !goalOptions.contains(store.goalDays) {
-                            Text("\(store.goalDays) 天（自定义）").tag(store.goalDays)
+                            Text(LF("%@ 天（自定义）", "\(store.goalDays)")).tag(store.goalDays)
                         }
                     }
                     .pickerStyle(.menu)
@@ -57,21 +57,36 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
                 RowDivider()
-                SettingRow(icon: "circle.lefthalf.filled", color: .indigo, title: "外观") {
+                SettingRow(icon: "circle.lefthalf.filled", color: .indigo, title: L("外观")) {
                     Picker("", selection: Binding(
                         get: { UserDefaults.standard.string(forKey: "appearance") ?? "system" },
                         set: { UserDefaults.standard.set($0, forKey: "appearance") }
                     )) {
-                        Text("跟随系统").tag("system")
-                        Text("浅色").tag("light")
-                        Text("深色").tag("dark")
+                        Text(L("跟随系统")).tag("system")
+                        Text(L("浅色")).tag("light")
+                        Text(L("深色")).tag("dark")
                     }
                     .pickerStyle(.menu)
                     .frame(width: 120)
                     .labelsHidden()
                 }
                 RowDivider()
-                SettingRow(icon: "calendar.day.timeline.left", color: .teal, title: "日期格式") {
+                SettingRow(icon: "globe", color: .green, title: L("语言"), subtitle: L("选择语言后立即生效")) {
+                    Picker("", selection: Binding(
+                        get: { L10n.shared.lang },
+                        set: { L10n.shared.lang = $0 }
+                    )) {
+                        Text(L("跟随系统")).tag(L10n.Lang.system)
+                        Text("简体中文").tag(L10n.Lang.zhHans)
+                        Text("繁體中文").tag(L10n.Lang.zhHant)
+                        Text("English").tag(L10n.Lang.en)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 120)
+                    .labelsHidden()
+                }
+                RowDivider()
+                SettingRow(icon: "calendar.day.timeline.left", color: .teal, title: L("日期格式")) {
                     Picker("", selection: Binding(
                         get: { store.dateStyle },
                         set: { store.dateStyle = $0 }
@@ -92,23 +107,23 @@ struct SettingsView: View {
 
     private var dataGroup: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GroupHeader(text: "数据与维护")
+            GroupHeader(text: L("数据与维护"))
             SettingsGroup {
-                SettingRow(icon: "square.and.arrow.up", color: .blue, title: "导出数据", subtitle: "导出全部周期、破戒事件和每日记录（JSON 文件）") {
-                    PillButton(title: "导出", color: .blue) { exportData() }
+                SettingRow(icon: "square.and.arrow.up", color: .blue, title: L("导出数据"), subtitle: L("导出全部周期、破戒事件和每日记录（JSON 文件）")) {
+                    PillButton(title: L("导出"), color: .blue) { exportData() }
                 }
                 RowDivider()
-                SettingRow(icon: "square.and.arrow.down", color: .teal, title: "导入数据", subtitle: "从导出的文件恢复记录（将覆盖当前数据）") {
-                    PillButton(title: "导入", color: .teal) { pickImportFile() }
+                SettingRow(icon: "square.and.arrow.down", color: .teal, title: L("导入数据"), subtitle: L("从导出的文件恢复记录（将覆盖当前数据）")) {
+                    PillButton(title: L("导入"), color: .teal) { pickImportFile() }
                 }
                 RowDivider()
-                SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: "自动备份", subtitle: "系统每 12 小时自动备份一次（保留最近 10 份），备份文件存放在下方数据目录的 backups 文件夹中") {
+                SettingRow(icon: "externaldrive.badge.timemachine", color: .indigo, title: L("自动备份"), subtitle: L("系统每 12 小时自动备份一次（保留最近 10 份），备份文件存放在下方数据目录的 backups 文件夹中")) {
                     EmptyView()
                 }
                 RowDivider()
 
-                SettingRow(icon: "folder", color: .yellow, title: "数据目录", subtitle: Database.dataDirectory.path) {
-                    PillButton(title: "打开", color: .gray) {
+                SettingRow(icon: "folder", color: .yellow, title: L("数据目录"), subtitle: Database.dataDirectory.path) {
+                    PillButton(title: L("打开"), color: .gray) {
                         NSWorkspace.shared.open(Database.dataDirectory)
                     }
                 }

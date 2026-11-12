@@ -14,10 +14,10 @@ struct RecordView: View {
                 if store.relapseSet().contains(currentDate) {
                     relapseBanner
                 }
-                SectionCard(title: "今日心态（单选）") {
+                SectionCard(title: L("今日心态（单选）")) {
                     FlowChips(options: RecordOptions.moods, selected: draft.mood) { draft.mood = ($0 == draft.mood) ? nil : $0 }
                 }
-                SectionCard(title: "今日情绪（可多选）") {
+                SectionCard(title: L("今日情绪（可多选）")) {
                     FlowChips(options: RecordOptions.emotions, selected: nil, multiSelected: draft.emotions) { item in
                         if draft.emotions.contains(item) {
                             draft.emotions = draft.emotions.filter { $0 != item }
@@ -26,35 +26,35 @@ struct RecordView: View {
                         }
                     }
                 }
-                SectionCard(title: "今日状态") {
+                SectionCard(title: L("今日状态")) {
                     FlowChips(options: RecordOptions.states, selected: draft.state) { draft.state = ($0 == draft.state) ? nil : $0 }
                 }
-                SectionCard(title: "今日行为情况（可不填，各字段独立记录）") {
-                    TriStateChips(label: "是否接触色情内容", value: $draft.contactedPorn)
+                SectionCard(title: L("今日行为情况（可不填，各字段独立记录）")) {
+                    TriStateChips(label: L("是否接触色情内容"), value: $draft.contactedPorn)
                     Divider().padding(.vertical, 6)
-                    TriStateChips(label: "是否发生目标行为", value: $draft.targetBehavior)
+                    TriStateChips(label: L("是否发生目标行为"), value: $draft.targetBehavior)
                     Divider().padding(.vertical, 6)
-                    TriStateChips(label: "是否出现明显冲动", value: $draft.strongUrge)
+                    TriStateChips(label: L("是否出现明显冲动"), value: $draft.strongUrge)
                     Divider().padding(.vertical, 6)
-                    Text("备注")
+                    Text(L("备注"))
                         .font(.system(size: 13))
                         .foregroundStyle(.primary.opacity(0.8))
                     NoteEditor(text: Binding(
                         get: { draft.behaviorNote ?? "" },
                         set: { draft.behaviorNote = $0.isEmpty ? nil : $0 }
-                    ), placeholder: "与行为相关的备注（可选）……", minHeight: 60)
+                    ), placeholder: L("与行为相关的备注（可选）……"), minHeight: 60)
                 }
-                SectionCard(title: "今日变化与感知") {
+                SectionCard(title: L("今日变化与感知")) {
                     NoteEditor(text: Binding(
                         get: { draft.perception ?? "" },
                         set: { draft.perception = $0.isEmpty ? nil : $0 }
-                    ), placeholder: "今天感受到了什么变化？例如：工作时注意力比较集中 / 精神状态不错 / 有些疲惫…", minHeight: 70)
+                    ), placeholder: L("今天感受到了什么变化？例如：工作时注意力比较集中 / 精神状态不错 / 有些疲惫…"), minHeight: 70)
                 }
-                SectionCard(title: "自由记录") {
+                SectionCard(title: L("自由记录")) {
                     NoteEditor(text: Binding(
                         get: { draft.freeText ?? "" },
                         set: { draft.freeText = $0.isEmpty ? nil : $0 }
-                    ), placeholder: "今天发生了什么、想了什么、遇到什么问题……不受模板限制，写你想留下的。", minHeight: 140)
+                    ), placeholder: L("今天发生了什么、想了什么、遇到什么问题……不受模板限制，写你想留下的。"), minHeight: 140)
                 }
 
                 footerBar
@@ -96,7 +96,7 @@ struct RecordView: View {
 
             Spacer()
 
-            Button("回到今天") { currentDate = store.todayKey }
+            Button(L("回到今天")) { currentDate = store.todayKey }
                 .buttonStyle(.borderless)
                 .disabled(currentDate == store.todayKey)
         }
@@ -107,7 +107,7 @@ struct RecordView: View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
-            Text("这一天被标记为破戒日。当天的记录会独立保存。")
+            Text(L("这一天被标记为破戒日。当天的记录会独立保存。"))
                 .font(.callout)
             Spacer()
         }
@@ -119,7 +119,7 @@ struct RecordView: View {
         HStack {
             if let saved = store.lastSavedAt, !draftIsNew {
                 Spacer()
-                Text("已保存 \(saved.formatted(date: .omitted, time: .standard))")
+                Text(LF("已保存 %@", saved.formatted(date: .omitted, time: .standard)))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -169,7 +169,7 @@ struct FlowChips: View {
         FlowLayout(spacing: 8) {
             ForEach(options, id: \.self) { option in
                 let isSel = multiSelected.contains(option) || option == selected
-                Chip(text: option, selected: isSel) { action(option) }
+                Chip(text: L(option), selected: isSel) { action(option) }
             }
         }
     }

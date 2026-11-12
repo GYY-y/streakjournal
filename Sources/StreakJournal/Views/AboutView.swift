@@ -17,12 +17,12 @@ struct AboutView: View {
                         .frame(width: 96, height: 96)
                         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
-                    Text("坚持记录")
+                    Text(L("坚持记录"))
                         .font(.system(size: 24, weight: .bold))
                     Text("StreakJournal v\(appVersion)")
                         .font(.system(size: 13).monospacedDigit())
                         .foregroundStyle(.secondary)
-                    Text("个人每日记录与坚持周期管理工具 · macOS 原生应用（Apple Silicon）")
+                    Text(L("个人每日记录与坚持周期管理工具 · macOS 原生应用（Apple Silicon）"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -30,19 +30,19 @@ struct AboutView: View {
                 .padding(.vertical, 28)
 
                 SettingsGroup {
-                    SettingRow(icon: "book", color: .blue, title: "使用说明", subtitle: "每日记录自动保存，无需手动点击保存。") {
+                    SettingRow(icon: "book", color: .blue, title: L("使用说明"), subtitle: L("每日记录自动保存，无需手动点击保存。")) {
                         EmptyView()
                     }
                     RowDivider()
-                    SettingRow(icon: "arrow.counterclockwise.circle", color: .green, title: "开启新周期", subtitle: "开启新周期只结束当前周期，之前的所有历史记录完整保留，不会删除。") {
+                    SettingRow(icon: "arrow.counterclockwise.circle", color: .green, title: L("开启新周期"), subtitle: L("开启新周期只结束当前周期，之前的所有历史记录完整保留，不会删除。")) {
                         EmptyView()
                     }
                     RowDivider()
-                    SettingRow(icon: "exclamationmark.triangle", color: .orange, title: "破戒日", subtitle: "破戒日独立保存、不计入任何周期的坚持天数，可以在首页或设置中补录。") {
+                    SettingRow(icon: "exclamationmark.triangle", color: .orange, title: L("破戒日"), subtitle: L("破戒日独立保存、不计入任何周期的坚持天数，可以在首页或设置中补录。")) {
                         EmptyView()
                     }
                     RowDivider()
-                    SettingRow(icon: "externaldrive", color: .indigo, title: "数据安全", subtitle: "全部数据保存在本机（\(Database.dataDirectory.path)），系统每 12 小时自动备份一次（保留最近 10 份），支持导出。") {
+                    SettingRow(icon: "externaldrive", color: .indigo, title: L("数据安全"), subtitle: LF("全部数据保存在本机（%@），系统每 12 小时自动备份一次（保留最近 10 份），支持导出。", Database.dataDirectory.path)) {
                         EmptyView()
                     }
                 }

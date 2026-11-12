@@ -14,7 +14,7 @@ struct RecordDetailSheet: View {
                     .font(.title2.weight(.semibold))
                 statusChips
                 Spacer()
-                Button("关闭") { dismiss() }
+                Button(L("关闭")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
             }
 
@@ -34,15 +34,15 @@ struct RecordDetailSheet: View {
                     }
 
                     if let cycle = cycleFor(date) {
-                        LabeledRow("所属周期", cycleTitle(cycle))
+                        LabeledRow(L("所属周期"), cycleTitle(cycle))
                     } else {
-                        LabeledRow("所属周期", store.relapseSet().contains(date) ? "破戒日（不属于任何周期）" : "不属于任何周期")
+                        LabeledRow(L("所属周期"), store.relapseSet().contains(date) ? L("破戒日（不属于任何周期）") : L("不属于任何周期"))
                     }
 
                     if let record = store.record(for: date) {
                         RecordContent(record: record)
                     } else {
-                        Text("这一天没有留下记录。")
+                        Text(L("这一天没有留下记录。"))
                             .font(.callout)
                             .foregroundStyle(.tertiary)
                     }
@@ -61,13 +61,13 @@ struct RecordDetailSheet: View {
     private var statusChips: some View {
         HStack(spacing: 6) {
             if store.cycleStartSet().contains(date) {
-                Chip(text: "周期开始", selected: true)
+                Chip(text: L("周期开始"), selected: true)
             }
             if store.relapseSet().contains(date) {
-                Chip(text: "破戒", selected: true, tint: .red)
+                Chip(text: L("破戒"), selected: true, tint: .red)
             }
             if store.record(for: date) != nil {
-                Chip(text: "有记录", selected: true, tint: .teal)
+                Chip(text: L("有记录"), selected: true, tint: .teal)
             }
         }
     }
@@ -85,17 +85,17 @@ struct RecordDetailSheet: View {
 
     private func relapseTitle(_ r: RelapseEvent) -> String {
         if let note = r.note, !note.isEmpty {
-            return "破戒日 · \(note)"
+            return LF("破戒日 · %@", note)
         }
-        return "破戒日"
+        return L("破戒日")
     }
 
     private func cycleTitle(_ c: Cycle) -> String {
         let start = DateUtil.display(c.startDate, style: store.dateStyle)
         if let end = c.endDate {
-            return "开始于 \(start)，结束于 \(DateUtil.display(end, style: store.dateStyle))"
+            return LF("开始于 %@，结束于 %@", start, DateUtil.display(end, style: store.dateStyle))
         }
-        return "开始于 \(start)，进行中"
+        return LF("开始于 %@", start)
     }
 }
 
@@ -105,41 +105,41 @@ struct RecordContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let mood = record.mood {
-                field("今日心态") { Chip(text: mood, selected: true) }
+                field(L("今日心态")) { Chip(text: L(mood), selected: true) }
             }
             if !record.emotions.isEmpty {
-                field("今日情绪") {
+                field(L("今日情绪")) {
                     HStack(spacing: 6) {
-                        ForEach(record.emotions, id: \.self) { Chip(text: $0, selected: true, tint: .purple) }
+                        ForEach(record.emotions, id: \.self) { Chip(text: L($0), selected: true, tint: .purple) }
                     }
                 }
             }
             if let state = record.state {
-                field("今日状态") { Chip(text: state, selected: true, tint: .teal) }
+                field(L("今日状态")) { Chip(text: L(state), selected: true, tint: .teal) }
             }
 
             let behavior = behaviorLines
             if !behavior.isEmpty {
-                field("行为情况") {
+                field(L("行为情况")) {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(behavior, id: \.self) { line in
                             Text(line).font(.system(size: 13))
                         }
                         if let note = record.behaviorNote {
-                            Text("备注：\(note)").font(.system(size: 13)).foregroundStyle(.secondary)
+                            Text(LF("备注：%@", note)).font(.system(size: 13)).foregroundStyle(.secondary)
                         }
                     }
                 }
             }
 
             if let p = record.perception {
-                field("变化与感知") { Text(p).font(.system(size: 13)) }
+                field(L("变化与感知")) { Text(p).font(.system(size: 13)) }
             }
             if let t = record.freeText {
-                field("自由记录") { Text(t).font(.system(size: 13)) }
+                field(L("自由记录")) { Text(t).font(.system(size: 13)) }
             }
 
-            Text("最后更新：\(DateUtil.displayDateTime(record.updatedAt))")
+            Text(LF("最后更新：%@", DateUtil.displayDateTime(record.updatedAt)))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -147,9 +147,9 @@ struct RecordContent: View {
 
     private var behaviorLines: [String] {
         var lines: [String] = []
-        if let v = record.contactedPorn { lines.append("接触色情内容：\(v ? "是" : "否")") }
-        if let v = record.targetBehavior { lines.append("发生目标行为：\(v ? "是" : "否")") }
-        if let v = record.strongUrge { lines.append("出现明显冲动：\(v ? "是" : "否")") }
+        if let v = record.contactedPorn { lines.append(LF("接触色情内容：%@", L(v ? "是" : "否"))) }
+        if let v = record.targetBehavior { lines.append(LF("发生目标行为：%@", L(v ? "是" : "否"))) }
+        if let v = record.strongUrge { lines.append(LF("出现明显冲动：%@", L(v ? "是" : "否"))) }
         return lines
     }
 
