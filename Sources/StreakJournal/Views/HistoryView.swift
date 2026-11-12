@@ -17,7 +17,7 @@ struct HistoryView: View {
         var id: String { date }
     }
 
-    @State private var mode: Mode = .calendar
+    @State private var mode: Mode = Mode(rawValue: UserDefaults.standard.string(forKey: "statsMode") ?? "") ?? .calendar
     @State private var month = DateUtil.monthKey(DateUtil.todayKey())
     @State private var filterCycleID: Int64 = 0       // 0 = 全部
     @State private var filterRelapseOnly = false
@@ -63,6 +63,9 @@ struct HistoryView: View {
         }
         .sheet(item: $selectedDate) { selection in
             RecordDetailSheet(date: selection.day)
+        }
+        .onChange(of: mode) { _, new in
+            UserDefaults.standard.set(new.rawValue, forKey: "statsMode")
         }
     }
 
