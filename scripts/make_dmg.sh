@@ -19,7 +19,7 @@ ln -s /Applications "$STAGING/Applications"
 
 echo "==> 打包 DMG"
 hdiutil create \
-    -volname "坚持记录" \
+    -volname "循迹" \
     -srcfolder "$STAGING" \
     -format UDZO \
     -fs HFS+ \

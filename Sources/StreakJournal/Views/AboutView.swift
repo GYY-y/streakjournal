@@ -17,7 +17,7 @@ struct AboutView: View {
                         .frame(width: 96, height: 96)
                         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
-                    Text(L("坚持记录"))
+                    Text(L("循迹"))
                         .font(.system(size: 24, weight: .bold))
                     Text("StreakJournal v\(appVersion)")
                         .font(.system(size: 13).monospacedDigit())

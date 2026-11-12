@@ -46,7 +46,7 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle(L("坚持记录"))
+        .navigationTitle(L("循迹"))
         .onChange(of: nav.page) { _, new in
             UserDefaults.standard.set(new.rawValue, forKey: "lastPage")
         }

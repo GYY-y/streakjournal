@@ -1,13 +1,13 @@
 #!/bin/bash
-# 构建坚持记录 StreakJournal.app（仅 Apple Silicon）
+# 构建循迹 StreakJournal.app（仅 Apple Silicon）
 # 用法: ./scripts/build_app.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 APP_NAME="StreakJournal"
-APP_DISPLAY_NAME="坚持记录"
+APP_DISPLAY_NAME="循迹"
 BUNDLE_ID="com.edy.streakjournal"
-VERSION="1.9.11"
+VERSION="1.9.12"
 ROOT="$(pwd)"
 BUILD="$ROOT/build"
 RESOURCE_SHADOW="$ROOT/.build/toolchain/usr/lib/swift"
@@ -105,7 +105,7 @@ cat > "$APP/Contents/Info.plist" << PLIST
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHumanReadableCopyright</key>
-    <string>个人坚持记录工具</string>
+    <string>循迹 · 个人坚持记录工具</string>
 </dict>
 </plist>
 PLIST

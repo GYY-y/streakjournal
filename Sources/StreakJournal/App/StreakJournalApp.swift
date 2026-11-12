@@ -63,12 +63,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             button.image = img
             print("[StatusItem] 使用打包图标 MenuBarIcon.png")
         } else {
-            button.image = NSImage(systemSymbolName: "rosette", accessibilityDescription: "坚持记录")?
+            button.image = NSImage(systemSymbolName: "rosette", accessibilityDescription: "循迹")?
                 .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))
             print("[StatusItem] 未找到 MenuBarIcon.png，使用 SF Symbol")
         }
         button.image?.isTemplate = false
-        button.toolTip = "坚持记录"
+        button.toolTip = "循迹"
 
         // 原生菜单：menu 属性直接挂在状态项上，左键/右键点击都弹出系统菜单
         let menu = NSMenu()
@@ -197,7 +197,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let q = Quotes.random()
         let r = L10n.shared.resolved
         let content = UNMutableNotificationContent()
-        content.title = L("坚持记录")
+        content.title = L("循迹")
         content.body = "「\(q.text(r))」 ——\(q.author(r))"
         content.sound = .default
 

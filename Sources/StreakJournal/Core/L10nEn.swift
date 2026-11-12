@@ -10,7 +10,7 @@ extension L10n {
         "勋章": "Badges",
         "设置": "Settings",
         "关于": "About",
-        "坚持记录": "StreakJournal",
+        "循迹": "StreakJournal",
 
         // Home
         "当前周期": "Current Cycle",
